@@ -1,0 +1,32 @@
+image: maven:3.9.11-eclipse-temurin-21-alpine
+
+cache:
+  paths:
+    - .m2/repository
+
+variables:
+  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"    
+
+stages:
+  - build
+  - test
+
+build:
+  stage: build
+  tags:
+    - docker 
+  script:
+    - mvn clean compile
+  artifacts:
+    paths:
+      - target/
+
+test:
+  stage: test
+  tags:
+    - docker 
+  script:
+    - mvn test
+  artifacts:
+    reports:
+      junit: target/surefire-reports/TEST-*.xml
