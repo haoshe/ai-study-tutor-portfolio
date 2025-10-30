@@ -3,6 +3,7 @@ package ie.tcd.scss.aichat.service;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 
 @Service
 public class ChatService {
@@ -17,6 +18,13 @@ public class ChatService {
         return chatClient.prompt()
                 .user(userMessage)
                 .call()
+                .content();
+    }
+    
+    public Flux<String> chatStream(String userMessage) {
+        return chatClient.prompt()
+                .user(userMessage)
+                .stream()
                 .content();
     }
 }
