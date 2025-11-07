@@ -1,5 +1,13 @@
 package ie.tcd.scss.aichat.repository;
+import ie.tcd.scss.aichat.model.User;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.Optional;
 
-public class UserRepository {
+@Repository
+public interface UserRepository extends JpaRepository<User, Long> {
 
+    Optional<User> findByEmail(String email);
+
+    boolean existsByEmail(String email);
 }
