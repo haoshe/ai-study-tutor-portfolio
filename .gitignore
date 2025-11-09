@@ -35,3 +35,6 @@ build/
 ### env ###
 .env
 *.env
+
+#### PowerShell ###
+load_env.ps1
