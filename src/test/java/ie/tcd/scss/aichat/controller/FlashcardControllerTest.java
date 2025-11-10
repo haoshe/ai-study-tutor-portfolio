@@ -4,6 +4,7 @@ import ie.tcd.scss.aichat.dto.Flashcard;
 import ie.tcd.scss.aichat.service.FlashcardService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc; //<--
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
@@ -23,7 +24,13 @@ import static org.hamcrest.Matchers.*;
  * Uses MockMvc to test REST API without starting full server
  * 
  */
+
 @WebMvcTest(FlashcardController.class)
+// Security filters are disabled for this test class to prevent 401/403 responses during
+// FlashcardController tests. This ensures that the controller can be tested without
+// authentication requirements.
+// Contributor: Tomas A.
+@AutoConfigureMockMvc(addFilters = false) // <--
 class FlashcardControllerTest {
     
     @Autowired
