@@ -72,27 +72,33 @@ button:disabled {
 
 .tabs {
   display: flex;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 2px solid #ddd;
+  background-color: #f0f0f0;
 }
 
 .tabs button {
   flex: 1;
   padding: 15px;
-  background-color: #f5f5f5;
+  background-color: #e0e0e0;
   border: none;
   border-radius: 0;
   cursor: pointer;
   font-size: 16px;
-  transition: background-color 0.3s;
+  font-weight: 600;
+  color: #555;
+  transition: all 0.3s;
 }
 
 .tabs button.active {
   background-color: white;
-  border-bottom: 3px solid #4CAF50;
+  color: #4CAF50;
+  border-bottom: 4px solid #4CAF50;
+  font-weight: bold;
 }
 
 .tabs button:hover {
-  background-color: #e8e8e8;
+  background-color: #d5d5d5;
+  color: #333;
 }
 
 .flashcards-container,
@@ -104,6 +110,7 @@ button:disabled {
   text-align: center;
   color: #666;
   padding: 40px;
+  font-size: 16px;
 }
 
 .flashcard {
@@ -165,4 +172,5 @@ button:disabled {
   background-color: #e8f5e9;
   border-radius: 4px;
   color: #2e7d32;
+  font-weight: 600;
 }
