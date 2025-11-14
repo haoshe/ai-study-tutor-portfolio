@@ -1,6 +1,9 @@
 package ie.tcd.scss.aichat.service;
 
 import ie.tcd.scss.aichat.dto.QuizQuestion;
+import ie.tcd.scss.aichat.model.Quiz;
+import ie.tcd.scss.aichat.repository.QuizRepository;
+import ie.tcd.scss.aichat.repository.QuizQuestionRepository;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.stereotype.Service;
@@ -18,9 +21,13 @@ import java.util.regex.Pattern;
 public class QuizService {
     
     private final ChatClient chatClient;
+    private final QuizRepository quizRepository;
+    private final QuizQuestionRepository quizQuestionRepository;
     
-    public QuizService(ChatModel chatModel) {
+    public QuizService(ChatModel chatModel, QuizRepository quizRepository, QuizQuestionRepository quizQuestionRepository) {
         this.chatClient = ChatClient.builder(chatModel).build();
+        this.quizRepository = quizRepository;
+        this.quizQuestionRepository = quizQuestionRepository;
     }
     
     /**
@@ -48,7 +55,50 @@ public class QuizService {
                 .content();
         
         // Parse AI response into quiz question objects
-        return parseQuizQuestions(aiResponse);
+        List<QuizQuestion> questions = parseQuizQuestions(aiResponse);
+        
+        // Save quiz and questions to database
+        saveQuizToDatabase(questions, difficultyLevel);
+        
+        return questions;
+    }
+    
+    /**
+     * Save generated quiz and questions to database
+     */
+    private void saveQuizToDatabase(List<QuizQuestion> questionDTOs, String difficulty) {
+        // Create Quiz entity
+        Quiz quiz = new Quiz();
+        quiz.setTitle("AI Generated Quiz");
+        quiz.setDescription("Quiz generated from study material");
+        // Note: course is commented out in entity, will need to be set when course feature is added
+        
+        // Save quiz first to get the ID
+        Quiz savedQuiz = quizRepository.save(quiz);
+        
+        // Save each question
+        for (QuizQuestion dto : questionDTOs) {
+            ie.tcd.scss.aichat.model.QuizQuestion entity = new ie.tcd.scss.aichat.model.QuizQuestion();
+            entity.setQuestion(dto.getQuestion());
+            
+            // Set individual options
+            List<String> options = dto.getOptions();
+            if (options.size() >= 4) {
+                entity.setOptionA(options.get(0));
+                entity.setOptionB(options.get(1));
+                entity.setOptionC(options.get(2));
+                entity.setOptionD(options.get(3));
+            }
+            
+            // Convert correct index to letter (0=A, 1=B, 2=C, 3=D)
+            char correctLetter = (char) ('A' + dto.getCorrectAnswer());
+            entity.setCorrectAnswer(String.valueOf(correctLetter));
+            
+            entity.setExplanation(dto.getExplanation());
+            entity.setQuiz(savedQuiz);
+            
+            quizQuestionRepository.save(entity);
+        }
     }
     
     /**

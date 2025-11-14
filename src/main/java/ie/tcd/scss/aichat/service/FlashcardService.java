@@ -22,6 +22,7 @@ public class FlashcardService {
 
     public FlashcardService(ChatModel chatModel, FlashcardRepository flashcardRepository) {
         this.chatClient = ChatClient.builder(chatModel).build();
+        this.flashcardRepository = flashcardRepository;
     }
     
     /**
@@ -45,7 +46,24 @@ public class FlashcardService {
                 .content();
         
         // Parse AI response into flashcard objects
-        return parseFlashcards(aiResponse);
+        List<Flashcard> flashcards = parseFlashcards(aiResponse);
+        
+        // Save flashcards to database
+        saveFlashcardsToDatabase(flashcards);
+        
+        return flashcards;
+    }
+    
+    /**
+     * Save generated flashcards to database
+     */
+    private void saveFlashcardsToDatabase(List<Flashcard> flashcardDTOs) {
+        for (Flashcard dto : flashcardDTOs) {
+            ie.tcd.scss.aichat.model.Flashcard entity = new ie.tcd.scss.aichat.model.Flashcard();
+            entity.setQuestion(dto.getQuestion());
+            entity.setAnswer(dto.getAnswer());
+            flashcardRepository.save(entity);
+        }
     }
     
     /**
