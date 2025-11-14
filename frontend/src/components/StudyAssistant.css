@@ -174,3 +174,18 @@ button:disabled {
   color: #2e7d32;
   font-weight: 600;
 }
+
+.toggle-answer-btn {
+  background-color: #4CAF50;
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin: 10px 0;
+  font-size: 14px;
+}
+
+.toggle-answer-btn:hover {
+  background-color: #45a049;
+}

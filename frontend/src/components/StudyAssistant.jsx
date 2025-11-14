@@ -10,6 +10,15 @@ function StudyAssistant() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('flashcards');
+  const [visibleAnswers, setVisibleAnswers] = useState({});
+
+
+    const toggleAnswer = (index) => {
+      setVisibleAnswers(prev => ({
+        ...prev,
+        [index]: !prev[index]
+      }));
+    };git 
 
   // Generate Flashcards
   const generateFlashcards = async () => {
@@ -133,14 +142,22 @@ function StudyAssistant() {
               <p className="no-results">No flashcards generated yet</p>
             ) : (
               flashcards.map((card, index) => (
-                <div key={index} className="flashcard">
-                  <div className="question">
-                    <strong>Q:</strong> {card.question}
-                  </div>
-                  <div className="answer">
-                    <strong>A:</strong> {card.answer}
-                  </div>
-                </div>
+  <div key={index} className="flashcard">
+    <div className="question">
+      <strong>Q:</strong> {card.question}
+    </div>
+    <button 
+      onClick={() => toggleAnswer(index)}
+      className="toggle-answer-btn"
+    >
+      {visibleAnswers[index] ? 'Hide Answer' : 'Answer'}
+    </button>
+    {visibleAnswers[index] && (
+      <div className="answer">
+        <strong>A:</strong> {card.answer}
+      </div>
+    )}
+  </div>
               ))
             )}
           </div>
