@@ -11,6 +11,7 @@ function StudyAssistant() {
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('flashcards');
   const [visibleAnswers, setVisibleAnswers] = useState({});
+  const [userAnswers, setUserAnswers] = useState({});
 
 
     const toggleAnswer = (index) => {
@@ -18,7 +19,7 @@ function StudyAssistant() {
         ...prev,
         [index]: !prev[index]
       }));
-    };git 
+    };
 
   // Generate Flashcards
   const generateFlashcards = async () => {
@@ -54,6 +55,13 @@ function StudyAssistant() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAnswerSelect = (questionIndex, selectedOption) => {
+    setUserAnswers(prev => ({
+      ...prev,
+      [questionIndex]: selectedOption
+    }));
   };
 
   // Generate Quiz
@@ -164,35 +172,62 @@ function StudyAssistant() {
         )}
 
         {/* Quiz Display */}
-        {activeTab === 'quiz' && (
-          <div className="quiz-container">
-            {quizzes.length === 0 ? (
-              <p className="no-results">No quiz generated yet</p>
-            ) : (
-              quizzes.map((question, index) => (
-                <div key={index} className="quiz-question">
-                  <h3>Question {index + 1}</h3>
-                  <p className="question-text">{question.question}</p>
-                  <div className="options">
-                    {question.options.map((option, optIndex) => (
-                      <div key={optIndex} className="option">
-                        <input 
-                          type="radio" 
-                          name={`question-${index}`} 
-                          id={`q${index}-opt${optIndex}`}
-                        />
-                        <label htmlFor={`q${index}-opt${optIndex}`}>{option}</label>
-                      </div>
-                    ))}
+          {activeTab === 'quiz' && (
+            <div className="quiz-container">
+              {quizzes.length === 0 ? (
+                <p className="no-results">No quiz generated yet</p>
+              ) : (
+                quizzes.map((question, index) => (
+                  <div key={index} className="quiz-question">
+                    <h3>Question {index + 1}</h3>
+                    <p className="question-text">{question.question}</p>
+                    <div className="options">
+                      {question.options.map((option, optIndex) => {
+                        const isSelected = userAnswers[index] === option;
+                        const isCorrect = optIndex === question.correctAnswer;
+                        const showFeedback = userAnswers[index] !== undefined;
+                        
+                        return (
+                          <div 
+                            key={optIndex} 
+                            className={`option ${isSelected && showFeedback ? (isCorrect ? 'correct' : 'incorrect') : ''}`}
+                            onClick={() => handleAnswerSelect(index, option)}
+                            style={{ cursor: 'pointer' }}
+                          >
+                            <input 
+                              type="radio" 
+                              name={`question-${index}`} 
+                              id={`q${index}-opt${optIndex}`}
+                              checked={isSelected}
+                              onChange={() => {}}
+                            />
+                            <label htmlFor={`q${index}-opt${optIndex}`} style={{ cursor: 'pointer' }}>
+                              {option}
+                            </label>
+                            {isSelected && showFeedback && (
+                              <span className="feedback">
+                                {isCorrect ? (
+                                  <>
+                                    <span className="feedback-text">Correct</span>
+                                    <span className="feedback-symbol">✓</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="feedback-text">Incorrect</span>
+                                    <span className="feedback-symbol">✗</span>
+                                  </>
+                                )}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div className="correct-answer">
-                    <strong>Correct Answer:</strong> {question.correctAnswer}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        )}
+                ))
+              )}
+            </div>
+          )}
       </div>
     </div>
   );

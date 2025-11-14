@@ -150,23 +150,6 @@ button:disabled {
   margin-bottom: 15px;
 }
 
-.options {
-  margin-bottom: 15px;
-}
-
-.option {
-  padding: 8px;
-  margin-bottom: 8px;
-}
-
-.option input[type="radio"] {
-  margin-right: 10px;
-}
-
-.option label {
-  cursor: pointer;
-}
-
 .correct-answer {
   padding: 10px;
   background-color: #e8f5e9;
@@ -188,4 +171,35 @@ button:disabled {
 
 .toggle-answer-btn:hover {
   background-color: #45a049;
+}
+
+.option {
+  padding: 10px;
+  margin: 5px 0;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+  display: flex;
+  align-items: center;
+}
+
+.option:hover {
+  background-color: #f0f0f0;
+}
+
+.option.correct {
+  background-color: #d4edda;
+}
+
+.option.incorrect {
+  background-color: #f8d7da;
+}
+
+.option input[type="radio"] {
+  margin-right: 10px;
+}
+
+.option label {
+  flex: 1;
+  margin-left: 8px;
+  cursor: pointer;
 }
