@@ -6,8 +6,6 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import org.aspectj.weaver.patterns.TypePatternQuestions.Question;
-
 @Entity
 @Table(name = "quizzes")
 @Data
@@ -27,12 +25,12 @@ public class Quiz {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
-    @ManyToOne
-    @JoinColumn(name = "course_id", nullable = false)
-    private Course course;
+    // @ManyToOne
+    // @JoinColumn(name = "course_id", nullable = false)
+    // private Course course;
 
     @OneToMany(mappedBy = "quiz", cascade = CascadeType.ALL)
-    private List<Question> questions;
+    private List<QuizQuestion> questions;
 
     @OneToMany(mappedBy = "quiz", cascade = CascadeType.ALL) //TODO: Check if cascade is needed and OneToMany is correct
     private List<QuizResult> results;

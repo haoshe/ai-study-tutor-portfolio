@@ -7,9 +7,9 @@ import java.util.List;
 @Repository
  public interface QuizRepository extends JpaRepository<Quiz, Long> {
     
-    List<Quiz> findByCourseId(Long courseId);
+    // List<Quiz> findByCourseId(Long courseId);
 
-    List<Quiz> findByCourseIdOrderByCreatedAtDesc(Long courseId);
+    // List<Quiz> findByCourseIdOrderByCreatedAtDesc(Long courseId);
 
-    long countByCourseId(Long courseId);
+    // long countByCourseId(Long courseId);
 }

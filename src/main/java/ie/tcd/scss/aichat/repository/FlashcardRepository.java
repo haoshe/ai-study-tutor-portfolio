@@ -7,11 +7,11 @@ import java.util.List;
 @Repository
 public interface FlashcardRepository extends JpaRepository<Flashcard, Long> {
 
-    List<Flashcard> findByCourseId(Long courseId);
+    // List<Flashcard> findByCourseId(Long courseId);
 
-    List<Flashcard> findByMaterialId(Long materialId);
+    // List<Flashcard> findByMaterialId(Long materialId);
 
-    long countByCourseId(Long courseId);
+    // long countByCourseId(Long courseId);
 
-    List<Flashcard> findByCourseIdOrderByCreatedAtDesc(Long courseId);
+    // List<Flashcard> findByCourseIdOrderByCreatedAtDesc(Long courseId);
 }

@@ -1,6 +1,7 @@
 package ie.tcd.scss.aichat.service;
 
 import ie.tcd.scss.aichat.dto.Flashcard;
+import ie.tcd.scss.aichat.repository.FlashcardRepository;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.stereotype.Service;
@@ -17,8 +18,9 @@ import java.util.regex.Pattern;
 public class FlashcardService {
     
     private final ChatClient chatClient;
-    
-    public FlashcardService(ChatModel chatModel) {
+    private final FlashcardRepository flashcardRepository;
+
+    public FlashcardService(ChatModel chatModel, FlashcardRepository flashcardRepository) {
         this.chatClient = ChatClient.builder(chatModel).build();
     }
     

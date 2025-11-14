@@ -28,9 +28,9 @@ public class Material {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
-    @ManyToOne
-    @JoinColumn(name = "course_id", nullable = false)
-    private Course course;
+    // @ManyToOne
+    // @JoinColumn(name = "course_id", nullable = false)
+    // private Course course;
 
     @OneToMany(mappedBy = "material", cascade = CascadeType.ALL) //TODO: Check if cascade is needed and OneToMany is correct
     private List<Summary> summaries;

@@ -24,9 +24,9 @@ public class Flashcard {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
-    @ManyToOne
-    @JoinColumn(name = "course_id", nullable = false)
-    private Course course;
+    // @ManyToOne
+    // @JoinColumn(name = "course_id", nullable = false)
+    // private Course course;
 
     @PrePersist
     protected void onCreate() {

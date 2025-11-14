@@ -9,16 +9,16 @@ import java.util.List;
 @Repository
 public interface QuizResultRepository extends JpaRepository<QuizResult, Long> {
 
-    List<QuizResult> findByUserId(Long userId);
+    // List<QuizResult> findByUserId(Long userId);
     
-    List<QuizResult> findByUserIdOrderByCompletedAtDesc(Long userId);
+    // List<QuizResult> findByUserIdOrderByCompletedAtDesc(Long userId);
 
-    List<QuizResult> findByQuizId(Long quizId);
+    // List<QuizResult> findByQuizId(Long quizId);
     
-    long countByUserId(Long userId);
+    // long countByUserId(Long userId);
 
-    @Query("SELECT AVG(qr.score * 100.0 / qr.totalQuestions) FROM QuizResult qr WHERE qr.user.id = :userId")
-    Double findAverageScoreByUserId(@Param("userId") Long userId);
+//     @Query("SELECT AVG(qr.score * 100.0 / qr.totalQuestions) FROM QuizResult qr WHERE qr.user.id = :userId")
+//     Double findAverageScoreByUserId(@Param("userId") Long userId);
     
-    List<QuizResult> findByUserIdAndQuizId(Long userId, Long quizId);
+//     List<QuizResult> findByUserIdAndQuizId(Long userId, Long quizId);
 }

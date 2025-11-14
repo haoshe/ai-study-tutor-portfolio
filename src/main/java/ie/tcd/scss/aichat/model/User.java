@@ -29,11 +29,11 @@ public class User {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-    private List<Course> courses;
+    // @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    // private List<Course> courses;
 
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-    private List<QuizResult> quizResults;
+    // @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    // private List<QuizResult> quizResults;
 
     @PrePersist
     protected void onCreate() {
