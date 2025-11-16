@@ -50,25 +50,29 @@ public class FlashcardService {
      * Build the prompt for OpenAI to generate flashcards
      */
     private String buildFlashcardPrompt(String studyMaterial, int count) {
-        return String.format("""
-                Generate %d flashcards from the following study material.
-                
-                Study Material:
-                %s
-                
-                Instructions:
-                - Create clear, concise questions that test key concepts
-                - Provide accurate, complete answers
-                - Focus on the most important information
-                - Make questions specific and unambiguous
-                
-                Format each flashcard EXACTLY like this:
-                Q: [Your question here]
-                A: [Your answer here]
-                
-                Generate %d flashcards now:
-                """, count, studyMaterial, count);
-    }
+    return String.format("""
+            Generate %d flashcards from the following study material.
+            
+            Study Material:
+            %s
+            
+            Instructions:
+            - **CRITICAL: Only use information from the provided study material above**
+            - **Do NOT use outside knowledge or general topics**
+            - **If the material is insufficient for %d flashcards, generate fewer flashcards**
+            - Create clear, concise questions that test key concepts FROM THE MATERIAL
+            - Provide accurate, complete answers BASED ONLY ON THE MATERIAL
+            - Focus on the most important information IN THE PROVIDED TEXT
+            - Make questions specific and unambiguous
+            - If the study material doesn't contain educational content, return an error message
+            
+            Format each flashcard EXACTLY like this:
+            Q: [Your question here]
+            A: [Your answer here]
+            
+            Generate flashcards now (up to %d):
+            """, count, studyMaterial, count, count);
+}
     
     /**
      * Parse AI response into list of Flashcard objects

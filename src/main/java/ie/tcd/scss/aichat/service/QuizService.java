@@ -57,31 +57,34 @@ public class QuizService {
     private String buildQuizPrompt(String studyMaterial, int count, String difficulty) {
         String difficultyInstructions = getDifficultyInstructions(difficulty);
         
-        return String.format("""
-                Generate %d multiple-choice quiz questions from the following study material.
-                
-                Study Material:
-                %s
-                
-                Requirements:
-                - Each question should have exactly 4 options (A, B, C, D)
-                - Only ONE option is correct
-                - Wrong answers (distractors) must be plausible but clearly incorrect
-                - Distractors should be related to the topic (not obviously wrong)
-                - %s
-                - Include a brief explanation for why the correct answer is right
-                
-                Format each question EXACTLY like this:
-                Q: [Your question here]
-                A: [Option A]
-                B: [Option B]
-                C: [Option C]
-                D: [Option D]
-                CORRECT: [A/B/C/D]
-                EXPLAIN: [Explanation of correct answer]
-                
-                Generate %d questions now:
-                """, count, studyMaterial, difficultyInstructions, count);
+return String.format("""
+            Generate %d multiple-choice quiz questions from the following study material.
+            
+            Study Material:
+            %s
+            
+            Requirements:
+            - Each question should have exactly 4 options (A, B, C, D)
+            - Only ONE option is correct
+            - **CRITICAL: Distribute correct answers evenly across all options (A, B, C, D)**
+            - **Each question should have the correct answer in a DIFFERENT position**
+            - **Example: Question 1 correct=B, Question 2 correct=D, Question 3 correct=A, etc.**
+            - Wrong answers (distractors) must be plausible but clearly incorrect
+            - Distractors should be related to the topic (not obviously wrong)
+            - %s
+            - Include a brief explanation for why the correct answer is right
+            
+            Format each question EXACTLY like this:
+            Q: [Your question here]
+            A: [Option A]
+            B: [Option B]
+            C: [Option C]
+            D: [Option D]
+            CORRECT: [A/B/C/D]
+            EXPLAIN: [Explanation of correct answer]
+            
+            Generate %d questions now:
+            """, count, studyMaterial, difficultyInstructions, count);
     }
     
     /**
