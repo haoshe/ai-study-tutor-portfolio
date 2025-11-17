@@ -50,28 +50,31 @@ public class FlashcardService {
      * Build the prompt for OpenAI to generate flashcards
      */
     private String buildFlashcardPrompt(String studyMaterial, int count) {
-    return String.format("""
-            Generate %d flashcards from the following study material.
-            
-            Study Material:
-            %s
-            
-            Instructions:
-            - **CRITICAL: Only use information from the provided study material above**
-            - **Do NOT use outside knowledge or general topics**
-            - **If the material is insufficient for %d flashcards, generate fewer flashcards**
-            - Create clear, concise questions that test key concepts FROM THE MATERIAL
-            - Provide accurate, complete answers BASED ONLY ON THE MATERIAL
-            - Focus on the most important information IN THE PROVIDED TEXT
-            - Make questions specific and unambiguous
-            - If the study material doesn't contain educational content, return an error message
-            
-            Format each flashcard EXACTLY like this:
-            Q: [Your question here]
-            A: [Your answer here]
-            
-            Generate flashcards now (up to %d):
-            """, count, studyMaterial, count, count);
+        return String.format("""
+                Generate UP TO %d flashcards from the following study material.
+                
+                Study Material:
+                %s
+                
+                Instructions:
+                - **CRITICAL: Only use information from the provided study material above**
+                - **DO NOT use outside knowledge or general topics**
+                - **CRITICAL: DO NOT generate repetitive or duplicate flashcards**
+                - **CRITICAL: If you can only generate fewer than %d UNIQUE flashcards from the material, generate only as many as you can without repetition**
+                - **Quality over quantity - it's better to generate 2 unique flashcards than 8 repetitive ones**
+                - Create clear, concise questions that test key concepts FROM THE MATERIAL
+                - Provide accurate, complete answers BASED ONLY ON THE MATERIAL
+                - Focus on the most important information IN THE PROVIDED TEXT
+                - Make questions specific and unambiguous
+                - Each flashcard should test a DIFFERENT concept or piece of information
+                - If the study material doesn't contain educational content, return an error message
+                
+                Format each flashcard EXACTLY like this:
+                Q: [Your question here]
+                A: [Your answer here]
+                
+                Generate UP TO %d unique, non-repetitive flashcards now:
+                """, count, studyMaterial, count, count);
 }
     
     /**

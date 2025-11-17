@@ -58,25 +58,28 @@ public class QuizService {
         String difficultyInstructions = getDifficultyInstructions(difficulty);
         
 return String.format("""
-            Generate %d multiple-choice quiz questions from the following study material.
+            Generate UP TO %d multiple-choice quiz questions from the following study material.
             
             Study Material:
             %s
             
             Requirements:
-            - Each question should have exactly 4 options (A, B, C, D)
-            - Only ONE option is correct
             - **CRITICAL: Only create questions using information EXPLICITLY in the study material above**
             - **DO NOT use outside knowledge, general computer science concepts, or theoretical applications**
             - **DO NOT create questions about what COULD be done with the material - only about what IS in the material**
-            - **If the material lacks educational content or is repetitive gibberish, return nothing**
+            - **CRITICAL: DO NOT generate repetitive or duplicate questions**
+            - **CRITICAL: If you can only generate fewer than %d UNIQUE questions from the material, generate only as many as you can without repetition**
+            - **Quality over quantity - it's better to generate 3 unique questions than 10 repetitive ones**
+            - **Each question must have UNIQUE question text - no duplicate phrasing**
+            - Each question should have exactly 4 options (A, B, C, D)
+            - Only ONE option is correct
             - **CRITICAL: Distribute correct answers evenly across all options (A, B, C, D)**
             - **Each question should have the correct answer in a DIFFERENT position**
-            - **Example: Question 1 correct=B, Question 2 correct=D, Question 3 correct=A, etc.**
             - Wrong answers (distractors) must be plausible but clearly incorrect
             - Distractors should be related to the topic (not obviously wrong)
             - %s
             - Include a brief explanation for why the correct answer is right
+            - If the material lacks educational content or is repetitive gibberish, return nothing
             
             Format each question EXACTLY like this:
             Q: [Your question here]
@@ -87,8 +90,8 @@ return String.format("""
             CORRECT: [A/B/C/D]
             EXPLAIN: [Explanation of correct answer]
             
-            Generate %d questions now:
-            """, count, studyMaterial, difficultyInstructions, count);
+            Generate UP TO %d unique, non-repetitive questions now:
+            """, count, studyMaterial, count, difficultyInstructions, count);
     }
     
     /**

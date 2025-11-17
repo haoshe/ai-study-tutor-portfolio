@@ -2,6 +2,7 @@ package ie.tcd.scss.aichat.controller;
 
 import ie.tcd.scss.aichat.dto.QuizQuestion;
 import ie.tcd.scss.aichat.dto.QuizRequest;
+import ie.tcd.scss.aichat.dto.QuizResponse;
 import ie.tcd.scss.aichat.service.QuizService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -32,10 +33,10 @@ public class QuizController {
      * }
      * 
      * @param request QuizRequest containing study material, count, and difficulty
-     * @return List of generated quiz questions
+     * @return QuizResponse with generated quiz questions and optional warning
      */
     @PostMapping("/generate")
-    public ResponseEntity<List<QuizQuestion>> generateQuiz(@RequestBody QuizRequest request) {
+    public ResponseEntity<QuizResponse> generateQuiz(@RequestBody QuizRequest request) {
         // Validate input
         if (request.getStudyMaterial() == null || request.getStudyMaterial().trim().isEmpty()) {
             return ResponseEntity.badRequest().build();
@@ -49,14 +50,29 @@ public class QuizController {
             }
         }
         
+        int requestedCount = request.getCount() != null ? request.getCount() : 5;
+        
         // Generate quiz using AI
         List<QuizQuestion> questions = quizService.generateQuiz(
             request.getStudyMaterial(),
-            request.getCount(),
+            requestedCount,
             request.getDifficulty()
         );
         
-        return ResponseEntity.ok(questions);
+        // Determine warning message
+        String warning = null;
+        if (questions.isEmpty()) {
+            warning = "Unable to generate quiz questions. The study material may be too short, repetitive, or lack educational content. Please provide more substantial material.";
+        } else if (questions.size() < requestedCount) {
+            warning = String.format(
+                "You requested %d questions, but we could only generate %d based on your study material. To get more questions, please provide more content.",
+                requestedCount, questions.size()
+            );
+        }
+        
+        // Create response with questions and optional warning
+        QuizResponse response = new QuizResponse(questions, warning);
+        return ResponseEntity.ok(response);
     }
     
     /**
