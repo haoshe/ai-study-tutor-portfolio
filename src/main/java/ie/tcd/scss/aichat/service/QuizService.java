@@ -66,6 +66,10 @@ return String.format("""
             Requirements:
             - Each question should have exactly 4 options (A, B, C, D)
             - Only ONE option is correct
+            - **CRITICAL: Only create questions using information EXPLICITLY in the study material above**
+            - **DO NOT use outside knowledge, general computer science concepts, or theoretical applications**
+            - **DO NOT create questions about what COULD be done with the material - only about what IS in the material**
+            - **If the material lacks educational content or is repetitive gibberish, return nothing**
             - **CRITICAL: Distribute correct answers evenly across all options (A, B, C, D)**
             - **Each question should have the correct answer in a DIFFERENT position**
             - **Example: Question 1 correct=B, Question 2 correct=D, Question 3 correct=A, etc.**
