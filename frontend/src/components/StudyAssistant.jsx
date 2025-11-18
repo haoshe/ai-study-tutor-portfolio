@@ -16,6 +16,8 @@ function StudyAssistant() {
   const [flashcardCount, setFlashcardCount] = useState(5);
   const [quizCount, setQuizCount] = useState(5);
   const [difficulty, setDifficulty] = useState('MEDIUM');
+  const [flashcardWarning, setFlashcardWarning] = useState('');
+  const [quizWarning, setQuizWarning] = useState('');
 
   const toggleAnswer = (index) => {
     setVisibleAnswers(prev => ({
@@ -37,12 +39,14 @@ function StudyAssistant() {
   const resetFlashcards = () => {
     setFlashcards([]);
     setVisibleAnswers({});
+    setFlashcardWarning('');
     setError('');
   };
 
   const resetQuiz = () => {
     setQuizzes([]);
     setUserAnswers({});
+    setQuizWarning('');
     setError('');
   };
 
@@ -56,6 +60,7 @@ function StudyAssistant() {
     setLoading(true);
     setLoadingType('flashcards');
     setError('');
+    setFlashcardWarning('');
     setVisibleAnswers({});
     
     try {
@@ -75,11 +80,13 @@ function StudyAssistant() {
       }
 
       const data = await response.json();
-      setFlashcards(data);
+      setFlashcards(data.flashcards || []);
+      setFlashcardWarning(data.warning || '');
       setError('');
     } catch (err) {
       setError(err.message);
       setFlashcards([]);
+      setFlashcardWarning('');
     } finally {
       setLoading(false);
       setLoadingType('');
@@ -103,6 +110,7 @@ function StudyAssistant() {
     setLoading(true);
     setLoadingType('quiz');
     setError('');
+    setQuizWarning('');
     setUserAnswers({});
     
     try {
@@ -123,11 +131,13 @@ function StudyAssistant() {
       }
 
       const data = await response.json();
-      setQuizzes(data);
+      setQuizzes(data.questions || []);
+      setQuizWarning(data.warning || '');
       setError('');
     } catch (err) {
       setError(err.message);
       setQuizzes([]);
+      setQuizWarning('');
     } finally {
       setLoading(false);
       setLoadingType('');
@@ -241,6 +251,9 @@ function StudyAssistant() {
         {/* Flashcards Display */}
         {activeTab === 'flashcards' && (
           <div className="flashcards-container">
+            {flashcardWarning && (
+              <div className="warning-message">⚠️ {flashcardWarning}</div>
+            )}
             {loading && loadingType === 'flashcards' ? (
               <div className="loading-container">
                 <div className="spinner"></div>
@@ -276,6 +289,9 @@ function StudyAssistant() {
         {/* Quiz Display */}
         {activeTab === 'quiz' && (
           <div className="quiz-container">
+            {quizWarning && (
+              <div className="warning-message">⚠️ {quizWarning}</div>
+            )}
             {loading && loadingType === 'quiz' ? (
               <div className="loading-container">
                 <div className="spinner"></div>

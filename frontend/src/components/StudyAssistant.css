@@ -325,3 +325,14 @@ button:disabled {
   font-weight: bold;
   margin: 10px 0 0 0;
 }
+
+.warning-message {
+  background-color: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  color: #856404;
+  font-size: 14px;
+  line-height: 1.5;
+}
