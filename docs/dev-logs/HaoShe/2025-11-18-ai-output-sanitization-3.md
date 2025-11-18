@@ -1,14 +1,16 @@
-# Frontend Warning Message Integration
+Here's the updated dev-log with the test fixes included:
+
+# Frontend Warning Message Integration and Test Updates
 
 **Date:** November 18, 2025  
 **Developer:** Hao  
 **Branch:** `new_frontend`
 
 ## Objective
-Update the frontend to handle the new backend response format that includes warning messages and properly display AI-generated content warnings to users.
+Update the frontend to handle the new backend response format that includes warning messages, properly display AI-generated content warnings to users, and fix controller tests to match the updated API response structure.
 
 ## Background
-Following the November 16-17 backend fixes for AI output sanitization (quiz answer bias, flashcard hallucination, quiz hallucination), the backend API responses were modified to include warning messages. The frontend was still expecting the old response format (direct arrays) and could not handle the new structure (response objects with `flashcards`/`questions` and `warning` fields).
+Following the November 16-17 backend fixes for AI output sanitization (quiz answer bias, flashcard hallucination, quiz hallucination), the backend API responses were modified to include warning messages. The frontend was still expecting the old response format (direct arrays) and could not handle the new structure (response objects with `flashcards`/`questions` and `warning` fields). Additionally, the controller unit tests were failing because they expected the old response format.
 
 ## Development Process
 
@@ -135,9 +137,92 @@ const resetQuiz = () => {
 }
 ```
 
+### Step 5: Resolve Development Server Issue
+
+**Issue Encountered:** When starting React dev server with `npm start`:
+```
+Error: EMFILE: too many open files, watch
+```
+
+**Root Cause:** React's file watcher hitting system's file descriptor limit in Coder workspace environment.
+
+**Solution Applied:**
+```bash
+CHOKIDAR_USEPOLLING=true npm start
+```
+
+**Alternative Permanent Solution:** Added to `frontend/.env`:
+```
+CHOKIDAR_USEPOLLING=true
+CHOKIDAR_INTERVAL=1000
+```
+
+### Step 6: Fix Failing Controller Tests
+
+**Prompt:** "remember i need to skip all the tests to build maven at the begining, i need to fix that too"
+
+**Issue Identified:** Running `mvn test` revealed 7 test failures in controller tests:
+```
+[ERROR] Tests run: 12, Failures: 4 -- in QuizControllerTest
+[ERROR] Tests run: 8, Failures: 3 -- in FlashcardControllerTest
+```
+
+**Root Cause:** Controller tests expected old response format (direct arrays at root) but controllers now return response objects with nested `flashcards`/`questions` and `warning` fields.
+
+**Files Modified:**
+- `src/test/java/ie/tcd/scss/aichat/controller/FlashcardControllerTest.java`
+- `src/test/java/ie/tcd/scss/aichat/controller/QuizControllerTest.java`
+
+#### FlashcardControllerTest Changes
+
+**Before:**
+```java
+.andExpect(jsonPath("$", hasSize(3)))
+.andExpect(jsonPath("$[0].question", is("What is Spring Boot?")))
+```
+
+**After:**
+```java
+.andExpect(jsonPath("$.flashcards", hasSize(3)))
+.andExpect(jsonPath("$.flashcards[0].question", is("What is Spring Boot?")))
+.andExpect(jsonPath("$.warning").doesNotExist())
+```
+
+**Updated Test Methods:**
+- `testGenerateFlashcards_Success` - Changed JSON path from `$` to `$.flashcards`
+- `testGenerateFlashcards_WithNullCount` - Changed JSON path from `$` to `$.flashcards`, updated mock expectation to `eq(5)` (default count)
+- `testGenerateFlashcards_LongStudyMaterial` - Changed JSON path from `$` to `$.flashcards`
+
+#### QuizControllerTest Changes
+
+**Before:**
+```java
+.andExpect(jsonPath("$", hasSize(2)))
+.andExpect(jsonPath("$[0].question", is("What is Spring Boot?")))
+```
+
+**After:**
+```java
+.andExpect(jsonPath("$.questions", hasSize(2)))
+.andExpect(jsonPath("$.questions[0].question", is("What is Spring Boot?")))
+.andExpect(jsonPath("$.warning").doesNotExist())
+```
+
+**Updated Test Methods:**
+- `testGenerateQuiz_Success` - Changed JSON path from `$` to `$.questions`
+- `testGenerateQuiz_WithoutCount` - Changed JSON path from `$` to `$.questions`, updated mock expectation to `eq(5)` (default count)
+- `testGenerateQuiz_WithoutDifficulty` - Changed JSON path from `$` to `$.questions`
+- `testGenerateQuiz_LargeCount` - Changed JSON path from `$` to `$.questions`
+
+**Test Results After Fix:**
+```
+[INFO] Tests run: 38, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+```
+
 ## Testing
 
-### Manual Testing Scenarios
+### Manual Frontend Testing Scenarios
 
 **Test 1: Normal Content**
 - Input: Sufficient study material
@@ -153,6 +238,17 @@ const resetQuiz = () => {
 
 **Test 4: Empty Array Handling**
 - Result: ✅ Frontend gracefully handles empty arrays without errors
+
+### Automated Test Results
+
+**Service Tests:** All passing (no changes needed)
+- `DocumentParsingServiceTest`: 4 tests passed
+- `FlashcardServiceTest`: 6 tests passed  
+- `QuizServiceTest`: 7 tests passed
+
+**Controller Tests:** All passing after fixes
+- `FlashcardControllerTest`: 8 tests passed (3 fixed)
+- `QuizControllerTest`: 12 tests passed (4 fixed)
 
 ## Technical Details
 
@@ -182,12 +278,24 @@ setFlashcardWarning(data.warning || ''); // Extract warning
 5. Frontend displays warning if present
 6. User sees helpful feedback about content quality/quantity
 
+### Test Assertion Updates
+
+**Key Changes:**
+- JSON path changed from root `$` to nested `$.flashcards` or `$.questions`
+- Added assertion for warning field: `.andExpect(jsonPath("$.warning").doesNotExist())`
+- Updated mock service expectations to match controller default values (count=5)
+
 ## Files Modified
 
 ```
-frontend/src/components/StudyAssistant.jsx   (~20 lines changed)
-frontend/src/components/StudyAssistant.css   (+10 lines)
-frontend/.env                                 (+2 lines - optional)
+Frontend:
+  frontend/src/components/StudyAssistant.jsx   (~20 lines changed)
+  frontend/src/components/StudyAssistant.css   (+10 lines)
+  frontend/.env                                 (+2 lines - optional)
+
+Backend Tests:
+  src/test/java/ie/tcd/scss/aichat/controller/FlashcardControllerTest.java   (~15 lines changed)
+  src/test/java/ie/tcd/scss/aichat/controller/QuizControllerTest.java        (~20 lines changed)
 ```
 
 ## Impact Assessment
@@ -197,5 +305,7 @@ frontend/.env                                 (+2 lines - optional)
 ✅ Warning messages display correctly to users  
 ✅ Empty arrays handled gracefully  
 ✅ Users receive feedback about content sufficiency  
-✅ Development server file watch issue resolved
+✅ Development server file watch issue resolved  
+✅ All controller tests passing with new response format  
+✅ Maven build no longer requires `-DskipTests` flag  
 
