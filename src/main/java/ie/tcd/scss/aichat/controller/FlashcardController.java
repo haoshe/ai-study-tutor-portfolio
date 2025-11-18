@@ -2,6 +2,7 @@ package ie.tcd.scss.aichat.controller;
 
 import ie.tcd.scss.aichat.dto.Flashcard;
 import ie.tcd.scss.aichat.dto.FlashcardRequest;
+import ie.tcd.scss.aichat.dto.FlashcardResponse;
 import ie.tcd.scss.aichat.service.FlashcardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -31,22 +32,37 @@ public class FlashcardController {
      * }
      * 
      * @param request FlashcardRequest containing study material and count
-     * @return List of generated flashcards
+     * @return FlashcardResponse with generated flashcards and optional warning
      */
     @PostMapping("/generate")
-    public ResponseEntity<List<Flashcard>> generateFlashcards(@RequestBody FlashcardRequest request) {
+    public ResponseEntity<FlashcardResponse> generateFlashcards(@RequestBody FlashcardRequest request) {
         // Validate input
         if (request.getStudyMaterial() == null || request.getStudyMaterial().trim().isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
         
+        int requestedCount = request.getCount() != null ? request.getCount() : 5;
+        
         // Generate flashcards using AI
         List<Flashcard> flashcards = flashcardService.generateFlashcards(
             request.getStudyMaterial(),
-            request.getCount()
+            requestedCount
         );
         
-        return ResponseEntity.ok(flashcards);
+        // Determine warning message
+        String warning = null;
+        if (flashcards.isEmpty()) {
+            warning = "Unable to generate flashcards. The study material may be too short, repetitive, or lack educational content. Please provide more substantial material.";
+        } else if (flashcards.size() < requestedCount) {
+            warning = String.format(
+                "You requested %d flashcards, but we could only generate %d based on your study material. To get more flashcards, please provide more content.",
+                requestedCount, flashcards.size()
+            );
+        }
+        
+        // Create response with flashcards and optional warning
+        FlashcardResponse response = new FlashcardResponse(flashcards, warning);
+        return ResponseEntity.ok(response);
     }
     
     /**
