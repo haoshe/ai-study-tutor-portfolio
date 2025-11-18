@@ -55,6 +55,11 @@ public class QuizController {
             request.getCount(),
             request.getDifficulty()
         );
+         // ⭐ FIX: ensure returned value is always a List, never a Map/null
+        if (questions == null) {        // ⭐ added
+            questions = List.of();      // ⭐ added
+        }                                // ⭐ added
+
         
         return ResponseEntity.ok(questions);
     }
