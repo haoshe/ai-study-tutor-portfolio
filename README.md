@@ -42,6 +42,8 @@ Communication: RESTful API with JSON
 
 ## Getting Started (Backend - Local Development)
 
+AI QUIZ AND FLASHCARD GENERATION ONLY WORK ON OPEN AI NO OTHER AIs
+
 1. Clone the repository:
    git clone [https://gitlab.scss.tcd.ie/csu33012-2526-group23/csu33012-2526-project23.git](https://gitlab.scss.tcd.ie/csu33012-2526-group23/csu33012-2526-project23.git)
    cd csu33012-2526-project23
@@ -49,6 +51,7 @@ Communication: RESTful API with JSON
 
    * Install IDE (e.g., VSCode)
    * Get OpenAI API key
+   * AI API calls require valid OPENAI_API_KEY AND ENOUGH CREDIT
    * Set as environment variable
 3. Run backend:
    mvn spring-boot:run
@@ -106,6 +109,8 @@ Method 2: Replace 8080 with 3000 in backend URL → paste in browser
 
 ## How to Use
 
+
+* AI API calls require valid OPENAI_API_KEY AND ENOUGH CREDIT
 * Generate Flashcards: Paste material → Click "Generate Flashcards" → View results
 * Generate Quiz: Paste material → Click "Generate Quiz" → Click Quiz tab → View questions
 
@@ -139,7 +144,7 @@ pkill -f node # if port in use
 
 ## Known Issues
 
-* AI API calls require valid OPENAI_API_KEY
+* AI API calls require valid OPENAI_API_KEY AND ENOUGH CREDIT
 * May need IDE/terminal restart for env variables
 
 ---
@@ -148,4 +153,8 @@ pkill -f node # if port in use
 
 Name: Tomas Audejaitis
 Email: [audejait@tcd.ie](mailto:audejait@tcd.ie)
-
+Role: CI/CD and DevOps, README, merging
+Hao She: AI creation and application
+Abdul: data storage and file upload
+Ngo Hung: backend
+Fiachra: Frontend
