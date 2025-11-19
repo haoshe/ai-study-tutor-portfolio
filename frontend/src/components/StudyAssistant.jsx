@@ -5,16 +5,21 @@ const API_BASE_URL = ''; // Empty because we're using proxy
 
 function StudyAssistant() {
   const [studyMaterial, setStudyMaterial] = useState('');
+  const [uploadedContent, setUploadedContent] = useState(''); // Stores PDF content separately
   const [flashcards, setFlashcards] = useState([]);
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('flashcards');
+  const [uploadedFileName, setUploadedFileName] = useState('');
 
   // Generate Flashcards
   const generateFlashcards = async () => {
-    if (!studyMaterial.trim()) {
-      setError('Please enter some study material');
+    // Use uploaded content if available, otherwise use manual input
+    const contentToUse = uploadedContent || studyMaterial;
+    
+    if (!contentToUse.trim()) {
+      setError('Please upload a document or enter some study material');
       return;
     }
 
@@ -28,7 +33,7 @@ function StudyAssistant() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          studyMaterial: studyMaterial,
+          studyMaterial: contentToUse,
           count: 5
         })
       });
@@ -49,8 +54,11 @@ function StudyAssistant() {
 
   // Generate Quiz
   const generateQuiz = async () => {
-    if (!studyMaterial.trim()) {
-      setError('Please enter some study material');
+    // Use uploaded content if available, otherwise use manual input
+    const contentToUse = uploadedContent || studyMaterial;
+    
+    if (!contentToUse.trim()) {
+      setError('Please upload a document or enter some study material');
       return;
     }
 
@@ -64,7 +72,7 @@ function StudyAssistant() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          studyMaterial: studyMaterial,
+          studyMaterial: contentToUse,
           questionCount: 5,
           difficulty: 'MEDIUM'
         })
@@ -84,12 +92,79 @@ function StudyAssistant() {
     }
   };
 
+  // Upload PDF/PPT Document
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Check file type
+    const validTypes = ['application/pdf', 'application/vnd.ms-powerpoint', 
+                        'application/vnd.openxmlformats-officedocument.presentationml.presentation'];
+    if (!validTypes.includes(file.type)) {
+      setError('Please upload a PDF or PowerPoint file');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setUploadedFileName(file.name);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(`${API_BASE_URL}/api/slides/upload`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload document');
+      }
+
+      const data = await response.json();
+      
+      // Extract text from all sections and store in background
+      const extractedText = data.sections
+        .map(section => section.content)
+        .join('\n\n');
+      
+      setUploadedContent(extractedText); // Store in background, don't display
+      setError('');
+    } catch (err) {
+      setError('Error: ' + err.message);
+      setUploadedFileName('');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="study-assistant">
       <h1>AI Study Assistant</h1>
       
       {/* Input Section */}
       <div className="input-section">
+        {/* File Upload */}
+        <div className="upload-section">
+          <label htmlFor="file-upload" className="upload-button">
+            📄 Upload PDF/PowerPoint
+          </label>
+          <input
+            id="file-upload"
+            type="file"
+            accept=".pdf,.ppt,.pptx"
+            onChange={handleFileUpload}
+            style={{ display: 'none' }}
+            disabled={loading}
+          />
+          {uploadedFileName && (
+            <span className="uploaded-file-name">✓ {uploadedFileName}</span>
+          )}
+        </div>
+
+        <div className="divider">OR</div>
+
         <textarea
           placeholder="Enter your study material here..."
           value={studyMaterial}

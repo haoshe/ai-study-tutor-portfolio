@@ -20,6 +20,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/quiz/**").permitAll()       // Allow public access to quiz API
                 .requestMatchers("/api/flashcards/**").permitAll() // Allow public access to flashcard API
+                .requestMatchers("/api/slides/**").permitAll()     // Allow public access to document upload API
                 .anyRequest().authenticated()                       // All other endpoints require authentication
             )
             .csrf(csrf -> csrf.disable()); // Disable CSRF for API testing (re-enable for production)
