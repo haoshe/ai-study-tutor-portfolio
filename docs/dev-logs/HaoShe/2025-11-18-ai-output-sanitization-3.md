@@ -1,0 +1,312 @@
+Here's the updated dev-log with the test fixes included:
+
+# Frontend Warning Message Integration and Test Updates
+
+**Date:** November 18, 2025  
+**Developer:** Hao  
+**Branch:** `new_frontend`
+
+## Objective
+Update the frontend to handle the new backend response format that includes warning messages, properly display AI-generated content warnings to users, and fix controller tests to match the updated API response structure.
+
+## Background
+Following the November 16-17 backend fixes for AI output sanitization (quiz answer bias, flashcard hallucination, quiz hallucination), the backend API responses were modified to include warning messages. The frontend was still expecting the old response format (direct arrays) and could not handle the new structure (response objects with `flashcards`/`questions` and `warning` fields). Additionally, the controller unit tests were failing because they expected the old response format.
+
+## Development Process
+
+### Step 1: Verify Backend AI Output
+
+**Prompt:** "now i need to fix the rest of issues, first, help me double check the current AI is outputting the desired material, both on flashcards and quizzes"
+
+**Action:** Executed comprehensive testing plan with 6 test cases covering:
+- Normal content generation (flashcards and quizzes)
+- Gibberish input handling
+- Minimal content with high request counts
+- Answer distribution verification (20 questions for statistical significance)
+
+**Test Results Summary:**
+- ✅ Flashcards: Normal generation working, gibberish rejected, warnings accurate
+- ✅ Quizzes: Normal generation working, gibberish rejected, answer distribution perfect (2,2,2,2)
+- ✅ All AI content constraints working correctly
+- ✅ No hallucination detected
+
+**Initial Issue Identified:** Warning messages showed incorrect requested count (always showing "5" instead of actual requested count)
+
+**Root Cause Found:** Test commands used wrong JSON field name (`questionCount` instead of `count`). After correction, warning messages displayed correctly.
+
+### Step 2: Identify Frontend Compatibility Issue
+
+**Prompt:** "currently my frontend can't handle the new warning message or [], I need to fix it"
+
+**Problem Analysis:**
+
+**Old Backend Response Format:**
+```json
+[
+  {"question": "...", "answer": "..."}
+]
+```
+
+**New Backend Response Format:**
+```json
+{
+  "flashcards": [...],
+  "warning": "You requested 5 flashcards, but we could only generate 2..."
+}
+```
+
+**Frontend Issues Identified:**
+1. Frontend treated response as direct array: `setFlashcards(data)` instead of `setFlashcards(data.flashcards)`
+2. No state variables to store warning messages
+3. No UI components to display warnings to users
+4. Empty arrays not extracted from response object properly
+
+### Step 3: Update Frontend Component
+
+**File Modified:** `frontend/src/components/StudyAssistant.jsx`
+
+**Changes Made:**
+
+#### Added Warning State Variables
+```javascript
+const [flashcardWarning, setFlashcardWarning] = useState('');
+const [quizWarning, setQuizWarning] = useState('');
+```
+
+#### Updated Flashcard Generation Function
+```javascript
+// Extract nested response structure
+const data = await response.json();
+setFlashcards(data.flashcards || []); // Extract flashcards array
+setFlashcardWarning(data.warning || ''); // Extract warning message
+```
+
+#### Updated Quiz Generation Function
+```javascript
+// Extract nested response structure
+const data = await response.json();
+setQuizzes(data.questions || []); // Extract questions array
+setQuizWarning(data.warning || ''); // Extract warning message
+```
+
+#### Updated Reset Functions
+```javascript
+const resetFlashcards = () => {
+  setFlashcards([]);
+  setVisibleAnswers({});
+  setFlashcardWarning(''); // Clear warning
+  setError('');
+};
+
+const resetQuiz = () => {
+  setQuizzes([]);
+  setUserAnswers({});
+  setQuizWarning(''); // Clear warning
+  setError('');
+};
+```
+
+#### Added Warning Display in UI
+```javascript
+{/* Flashcards Section */}
+{flashcardWarning && (
+  <div className="warning-message">⚠️ {flashcardWarning}</div>
+)}
+
+{/* Quiz Section */}
+{quizWarning && (
+  <div className="warning-message">⚠️ {quizWarning}</div>
+)}
+```
+
+### Step 4: Add CSS Styling
+
+**File Modified:** `frontend/src/components/StudyAssistant.css`
+
+**Added Warning Message Styling:**
+```css
+.warning-message {
+  background-color: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  color: #856404;
+  font-size: 14px;
+  line-height: 1.5;
+}
+```
+
+### Step 5: Resolve Development Server Issue
+
+**Issue Encountered:** When starting React dev server with `npm start`:
+```
+Error: EMFILE: too many open files, watch
+```
+
+**Root Cause:** React's file watcher hitting system's file descriptor limit in Coder workspace environment.
+
+**Solution Applied:**
+```bash
+CHOKIDAR_USEPOLLING=true npm start
+```
+
+**Alternative Permanent Solution:** Added to `frontend/.env`:
+```
+CHOKIDAR_USEPOLLING=true
+CHOKIDAR_INTERVAL=1000
+```
+
+### Step 6: Fix Failing Controller Tests
+
+**Prompt:** "remember i need to skip all the tests to build maven at the begining, i need to fix that too"
+
+**Issue Identified:** Running `mvn test` revealed 7 test failures in controller tests:
+```
+[ERROR] Tests run: 12, Failures: 4 -- in QuizControllerTest
+[ERROR] Tests run: 8, Failures: 3 -- in FlashcardControllerTest
+```
+
+**Root Cause:** Controller tests expected old response format (direct arrays at root) but controllers now return response objects with nested `flashcards`/`questions` and `warning` fields.
+
+**Files Modified:**
+- `src/test/java/ie/tcd/scss/aichat/controller/FlashcardControllerTest.java`
+- `src/test/java/ie/tcd/scss/aichat/controller/QuizControllerTest.java`
+
+#### FlashcardControllerTest Changes
+
+**Before:**
+```java
+.andExpect(jsonPath("$", hasSize(3)))
+.andExpect(jsonPath("$[0].question", is("What is Spring Boot?")))
+```
+
+**After:**
+```java
+.andExpect(jsonPath("$.flashcards", hasSize(3)))
+.andExpect(jsonPath("$.flashcards[0].question", is("What is Spring Boot?")))
+.andExpect(jsonPath("$.warning").doesNotExist())
+```
+
+**Updated Test Methods:**
+- `testGenerateFlashcards_Success` - Changed JSON path from `$` to `$.flashcards`
+- `testGenerateFlashcards_WithNullCount` - Changed JSON path from `$` to `$.flashcards`, updated mock expectation to `eq(5)` (default count)
+- `testGenerateFlashcards_LongStudyMaterial` - Changed JSON path from `$` to `$.flashcards`
+
+#### QuizControllerTest Changes
+
+**Before:**
+```java
+.andExpect(jsonPath("$", hasSize(2)))
+.andExpect(jsonPath("$[0].question", is("What is Spring Boot?")))
+```
+
+**After:**
+```java
+.andExpect(jsonPath("$.questions", hasSize(2)))
+.andExpect(jsonPath("$.questions[0].question", is("What is Spring Boot?")))
+.andExpect(jsonPath("$.warning").doesNotExist())
+```
+
+**Updated Test Methods:**
+- `testGenerateQuiz_Success` - Changed JSON path from `$` to `$.questions`
+- `testGenerateQuiz_WithoutCount` - Changed JSON path from `$` to `$.questions`, updated mock expectation to `eq(5)` (default count)
+- `testGenerateQuiz_WithoutDifficulty` - Changed JSON path from `$` to `$.questions`
+- `testGenerateQuiz_LargeCount` - Changed JSON path from `$` to `$.questions`
+
+**Test Results After Fix:**
+```
+[INFO] Tests run: 38, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+```
+
+## Testing
+
+### Manual Frontend Testing Scenarios
+
+**Test 1: Normal Content**
+- Input: Sufficient study material
+- Result: ✅ Content generated successfully, no warnings displayed
+
+**Test 2: Minimal Content with High Request**
+- Input: 2 sentences, requesting 10 flashcards
+- Result: ✅ Generated fewer flashcards, warning message displayed correctly
+
+**Test 3: Gibberish Input**
+- Input: "aaaaaaa..." repeated characters
+- Result: ✅ Empty array returned, warning message displayed about insufficient content
+
+**Test 4: Empty Array Handling**
+- Result: ✅ Frontend gracefully handles empty arrays without errors
+
+### Automated Test Results
+
+**Service Tests:** All passing (no changes needed)
+- `DocumentParsingServiceTest`: 4 tests passed
+- `FlashcardServiceTest`: 6 tests passed  
+- `QuizServiceTest`: 7 tests passed
+
+**Controller Tests:** All passing after fixes
+- `FlashcardControllerTest`: 8 tests passed (3 fixed)
+- `QuizControllerTest`: 12 tests passed (4 fixed)
+
+## Technical Details
+
+### Response Format Compatibility
+
+**Before:**
+```javascript
+// Direct array assignment
+const data = await response.json();
+setFlashcards(data); // data is array
+```
+
+**After:**
+```javascript
+// Object extraction with fallback
+const data = await response.json();
+setFlashcards(data.flashcards || []); // Extract from object
+setFlashcardWarning(data.warning || ''); // Extract warning
+```
+
+### Warning Message Flow
+
+1. Backend generates content with AI
+2. Backend determines if warning needed (empty array or partial generation)
+3. Backend returns `{ flashcards/questions: [...], warning: "..." }`
+4. Frontend extracts both data and warning from response object
+5. Frontend displays warning if present
+6. User sees helpful feedback about content quality/quantity
+
+### Test Assertion Updates
+
+**Key Changes:**
+- JSON path changed from root `$` to nested `$.flashcards` or `$.questions`
+- Added assertion for warning field: `.andExpect(jsonPath("$.warning").doesNotExist())`
+- Updated mock service expectations to match controller default values (count=5)
+
+## Files Modified
+
+```
+Frontend:
+  frontend/src/components/StudyAssistant.jsx   (~20 lines changed)
+  frontend/src/components/StudyAssistant.css   (+10 lines)
+  frontend/.env                                 (+2 lines - optional)
+
+Backend Tests:
+  src/test/java/ie/tcd/scss/aichat/controller/FlashcardControllerTest.java   (~15 lines changed)
+  src/test/java/ie/tcd/scss/aichat/controller/QuizControllerTest.java        (~20 lines changed)
+```
+
+## Impact Assessment
+
+### Issues Resolved
+✅ Frontend now handles new backend response format  
+✅ Warning messages display correctly to users  
+✅ Empty arrays handled gracefully  
+✅ Users receive feedback about content sufficiency  
+✅ Development server file watch issue resolved  
+✅ All controller tests passing with new response format  
+✅ Maven build no longer requires `-DskipTests` flag  
+## Tomas Edit to make this mergable
+
