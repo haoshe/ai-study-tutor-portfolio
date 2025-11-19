@@ -7,7 +7,7 @@ import java.util.List;
 @Repository
 public interface QuizQuestionRepository extends JpaRepository<QuizQuestion, Long> {
 
-    // List<QuizQuestion> findByQuizId(Long quizId);
+    List<QuizQuestion> findByQuizSetId(Long quizSetId);
 
-    // long countByQuizId(Long quizId);
- }
+    long countByQuizSetId(Long quizSetId);
+}
