@@ -4,13 +4,6 @@ cache:
   paths:
     - .m2/repository
 
-variables:
-  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"    
-  MYSQL_DATABASE: testdb
-  MYSQL_ROOT_PASSWORD: rootpass
-  MYSQL_USER: aichat_user
-  MYSQL_PASSWORD: aichat_pass
-
 stages:
   - build
   - test
@@ -32,6 +25,15 @@ test:
   services:
     - name: mysql:latest
       alias: mysql
+  variables:
+    DB_HOST: mysql
+    DB_NAME: aichat_db
+    DB_USERNAME: testuser
+    DB_PASSWORD: testpass
+    MYSQL_DATABASE: aichat_db
+    MYSQL_USER: testuser
+    MYSQL_PASSWORD: testpass
+    MYSQL_ROOT_PASSWORD: rootpass
   script:
     # Wait for MySQL to be ready
     - until mysqladmin ping -hmysql --silent; do echo "Waiting for database connection..."; sleep 2; done
