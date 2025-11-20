@@ -4,8 +4,11 @@ import ie.tcd.scss.aichat.dto.QuizQuestion;
 import ie.tcd.scss.aichat.model.User;
 import ie.tcd.scss.aichat.service.AuthService;
 import ie.tcd.scss.aichat.service.QuizService;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -23,12 +26,28 @@ public class QuizController {
     }
     
     @PostMapping("/generate")
-    public List<QuizQuestion> generateQuiz(
+    public ResponseEntity<?> generateQuiz(
             @RequestBody Map<String, Object> request,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        
+        // Validation
         String studyMaterial = (String) request.get("studyMaterial");
-        Integer questionCount = (Integer) request.get("questionCount");
+        if (studyMaterial == null || studyMaterial.trim().isEmpty()) {
+            return ResponseEntity.badRequest()
+                .body(Map.of("error", "Study material is required and cannot be empty"));
+        }
+        
+        // Support both "count" and "questionCount" for backward compatibility
+        Integer questionCount = request.containsKey("count") ? 
+            (Integer) request.get("count") : 
+            (Integer) request.get("questionCount");
         String difficulty = (String) request.get("difficulty");
+        
+        // Validate difficulty if provided
+        if (difficulty != null && !Arrays.asList("easy", "medium", "hard").contains(difficulty.toLowerCase())) {
+            return ResponseEntity.badRequest()
+                .body(Map.of("error", "Invalid difficulty. Must be 'easy', 'medium', or 'hard'"));
+        }
         
         // Extract user from JWT token (temporary: use default user if not authenticated)
         Long userId = null;
@@ -40,13 +59,25 @@ public class QuizController {
                 User user = authService.getUserFromToken(token);
                 userId = user.getId();
             } catch (Exception e) {
-                throw new RuntimeException("Unauthorized");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Unauthorized"));
             }
         } else {
             // For now, allow unauthenticated requests for testing (use user ID 1)
             userId = 1L;
         }
         
-        return quizService.generateQuiz(studyMaterial, questionCount, difficulty, userId, title);
+        try {
+            List<QuizQuestion> questions = quizService.generateQuiz(studyMaterial, questionCount, difficulty, userId, title);
+            return ResponseEntity.ok(questions);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Failed to generate quiz: " + e.getMessage()));
+        }
+    }
+    
+    @GetMapping("/test")
+    public ResponseEntity<Map<String, String>> testEndpoint() {
+        return ResponseEntity.ok(Map.of("message", "Quiz API is working!"));
     }
 }

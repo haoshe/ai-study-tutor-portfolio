@@ -52,11 +52,11 @@ class QuizServiceTest {
         User testUser = new User();
         testUser.setId(1L);
         testUser.setUsername("testuser");
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+        lenient().when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
         
         // Mock repository saves
-        when(quizSetRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(quizQuestionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(quizSetRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(quizQuestionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     }
     
     @Test

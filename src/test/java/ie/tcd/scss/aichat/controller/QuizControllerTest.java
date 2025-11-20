@@ -262,7 +262,8 @@ class QuizControllerTest {
         // When & Then: Test the /test endpoint
         mockMvc.perform(get("/api/quiz/test"))
                 .andExpect(status().isOk())
-                .andExpect(content().string("Quiz API is working!"));
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.message", is("Quiz API is working!")));
     }
     
     @Test
