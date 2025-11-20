@@ -8,6 +8,7 @@ function StudyAssistant() {
   const [studyMaterial, setStudyMaterial] = useState('');
   const [uploadedContent, setUploadedContent] = useState('');
   const [uploadedFileName, setUploadedFileName] = useState('');
+  const [inputSource, setInputSource] = useState('text'); // 'file' or 'text'
 
   // Flashcard States
   const [flashcards, setFlashcards] = useState([]);
@@ -68,15 +69,25 @@ function StudyAssistant() {
     setError('');
   };
 
-  // File Upload Handler
+  // File Upload Handler with size validation
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
+
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit
+    if (file.size > MAX_FILE_SIZE) {
+      setError('File size exceeds 10MB limit. Please upload a smaller file.');
+      setUploadedFileName('');
+      setUploadedContent('');
+      return;
+    }
 
     const validTypes = ['application/pdf', 'application/vnd.ms-powerpoint', 
                         'application/vnd.openxmlformats-officedocument.presentationml.presentation'];
     if (!validTypes.includes(file.type)) {
       setError('Please upload a PDF or PowerPoint file');
+      setUploadedFileName('');
+      setUploadedContent('');
       return;
     }
 
@@ -94,7 +105,7 @@ function StudyAssistant() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to upload document');
+        throw new Error(`Failed to upload document (${response.status}). The file format may not be supported.`);
       }
 
       const data = await response.json();
@@ -104,23 +115,49 @@ function StudyAssistant() {
         .map(section => section.content)
         .join('\n\n');
       
+      if (!extractedText.trim()) {
+        throw new Error('Document appears to be empty or unreadable');
+      }
+
       setUploadedContent(extractedText);
+      setInputSource('file'); // Auto-switch to file input on successful upload
       setError('');
     } catch (err) {
-      setError('Error: ' + err.message);
+      console.error('File upload error:', err);
+      setError(`Upload failed: ${err.message}`);
       setUploadedFileName('');
       setUploadedContent('');
+      setInputSource('text'); // Revert to text input on failure
     } finally {
       setLoading(false);
     }
   };
 
+  // Handle text input change - auto-switch to text source
+  const handleTextChange = (e) => {
+    setStudyMaterial(e.target.value);
+    if (e.target.value.trim() && inputSource === 'file' && error) {
+      // If switching from file with error to text, offer to clear error
+      setError('');
+    }
+  };
+
   // Generate Flashcards
   const generateFlashcards = async () => {
-    const contentToUse = uploadedContent || studyMaterial;
+    // Get content based on selected source
+    let contentToUse = '';
+    let sourceLabel = '';
+
+    if (inputSource === 'file') {
+      contentToUse = uploadedContent;
+      sourceLabel = uploadedFileName;
+    } else {
+      contentToUse = studyMaterial;
+      sourceLabel = 'Text input';
+    }
     
     if (!contentToUse.trim()) {
-      setError('Please upload a document or enter some study material');
+      setError(`Please provide study material via ${inputSource === 'file' ? 'file upload' : 'text input'}`);
       return;
     }
 
@@ -143,7 +180,7 @@ function StudyAssistant() {
       });
 
       if (!response.ok) {
-        throw new Error('Flashcards failed to generate');
+        throw new Error(`Flashcards failed to generate (${response.status}). The source material may be too short or unsupported.`);
       }
 
       const data = await response.json();
@@ -172,10 +209,20 @@ function StudyAssistant() {
 
   // Generate Quiz
   const generateQuiz = async () => {
-    const contentToUse = uploadedContent || studyMaterial;
+    // Get content based on selected source
+    let contentToUse = '';
+    let sourceLabel = '';
+
+    if (inputSource === 'file') {
+      contentToUse = uploadedContent;
+      sourceLabel = uploadedFileName;
+    } else {
+      contentToUse = studyMaterial;
+      sourceLabel = 'Text input';
+    }
     
     if (!contentToUse.trim()) {
-      setError('Please upload a document or enter some study material');
+      setError(`Please provide study material via ${inputSource === 'file' ? 'file upload' : 'text input'}`);
       return;
     }
 
@@ -199,7 +246,7 @@ function StudyAssistant() {
       });
 
       if (!response.ok) {
-        throw new Error('Quiz failed to generate');
+        throw new Error(`Quiz failed to generate (${response.status}). The source material may be too short or unsupported.`);
       }
 
       const data = await response.json();
@@ -226,38 +273,87 @@ function StudyAssistant() {
     }
   };
 
+  // Clear file upload
+  const clearFileUpload = () => {
+    setUploadedContent('');
+    setUploadedFileName('');
+    setInputSource('text');
+    setError('');
+    // Reset file input
+    const fileInput = document.getElementById('file-upload');
+    if (fileInput) fileInput.value = '';
+  };
+
   return (
     <div className="study-assistant">
       <h1>AI Study Assistant</h1>
       
       {/* Input Section */}
       <div className="input-section">
-        {/* File Upload */}
-        <div className="upload-section">
-          <label htmlFor="file-upload" className="upload-button">
-            📄 Upload PDF/PowerPoint
-          </label>
-          <input
-            id="file-upload"
-            type="file"
-            accept=".pdf,.ppt,.pptx"
-            onChange={handleFileUpload}
-            style={{ display: 'none' }}
-            disabled={loading}
-          />
-          {uploadedFileName && (
-            <span className="uploaded-file-name">✓ {uploadedFileName}</span>
-          )}
+        {/* Input Source Selector */}
+        <div className="input-source-selector">
+          <label>Select Study Material Source:</label>
+          <div className="source-options">
+            <label className="radio-label">
+              <input
+                type="radio"
+                value="text"
+                checked={inputSource === 'text'}
+                onChange={(e) => {
+                  setInputSource(e.target.value);
+                  setError('');
+                }}
+              />
+              Text Input
+            </label>
+              <label className="radio-label">
+              <input
+                type="radio"
+                value="file"
+                checked={inputSource === 'file'}
+                onChange={(e) => setInputSource(e.target.value)}
+              />
+              File Upload {uploadedFileName && `(${uploadedFileName})`}
+            </label>
+          </div>
         </div>
 
-        <div className="divider">OR</div>
-
-        <textarea
-          placeholder="Enter your study material here..."
-          value={studyMaterial}
-          onChange={(e) => setStudyMaterial(e.target.value)}
-          rows={8}
-        />
+        {/* File Upload Section */}
+        {inputSource === 'file' ? (
+          <div className="upload-section">
+            <label htmlFor="file-upload" className="upload-button">
+              📄 Upload PDF/PowerPoint
+            </label>
+            <input
+              id="file-upload"
+              type="file"
+              accept=".pdf,.ppt,.pptx"
+              onChange={handleFileUpload}
+              style={{ display: 'none' }}
+              disabled={loading}
+            />
+            {uploadedFileName && (
+              <div className="file-info">
+                <span className="uploaded-file-name">✓ {uploadedFileName}</span>
+                <button 
+                  className="clear-file-btn"
+                  onClick={clearFileUpload}
+                  disabled={loading}
+                >
+                  Clear
+                </button>
+              </div>
+            )}
+            <p className="source-note">File size limit: 10MB. Supported: PDF, PPT, PPTX</p>
+          </div>
+        ) : (
+          <textarea
+            placeholder="Enter your study material here..."
+            value={studyMaterial}
+            onChange={handleTextChange}
+            rows={8}
+          />
+        )}
         
         {/* Settings */}
         <div className="settings-section">
