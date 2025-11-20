@@ -6,6 +6,10 @@ cache:
 
 variables:
   MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"    
+  MYSQL_DATABASE: testdb
+  MYSQL_ROOT_PASSWORD: rootpass
+  MYSQL_USER: aichat_user
+  MYSQL_PASSWORD: aichat_pass
 
 stages:
   - build
@@ -25,7 +29,12 @@ test:
   stage: test
   tags:
     - docker 
+  services:
+    - name: mysql:latest
+      alias: mysql
   script:
+    # Wait for MySQL to be ready
+    - until mysqladmin ping -hmysql --silent; do echo "Waiting for database connection..."; sleep 2; done
     - mvn test
   artifacts:
     reports:
