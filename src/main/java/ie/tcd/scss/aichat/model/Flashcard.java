@@ -19,10 +19,6 @@ public class Flashcard {
     @JoinColumn(name = "set_id", nullable = false)
     private FlashcardSet flashcardSet;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "course_id", nullable = false)
-    private Course course;
-
     @Column(nullable = false, columnDefinition = "TEXT")
     private String question;
 

@@ -1,7 +1,11 @@
 package ie.tcd.scss.aichat.service;
 
 import ie.tcd.scss.aichat.dto.Flashcard;
+import ie.tcd.scss.aichat.model.FlashcardSet;
+import ie.tcd.scss.aichat.model.User;
 import ie.tcd.scss.aichat.repository.FlashcardRepository;
+import ie.tcd.scss.aichat.repository.FlashcardSetRepository;
+import ie.tcd.scss.aichat.repository.UserRepository;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.stereotype.Service;
@@ -19,10 +23,15 @@ public class FlashcardService {
     
     private final ChatClient chatClient;
     private final FlashcardRepository flashcardRepository;
+    private final FlashcardSetRepository flashcardSetRepository;
+    private final UserRepository userRepository;
 
-    public FlashcardService(ChatModel chatModel, FlashcardRepository flashcardRepository) {
+    public FlashcardService(ChatModel chatModel, FlashcardRepository flashcardRepository, 
+                          FlashcardSetRepository flashcardSetRepository, UserRepository userRepository) {
         this.chatClient = ChatClient.builder(chatModel).build();
         this.flashcardRepository = flashcardRepository;
+        this.flashcardSetRepository = flashcardSetRepository;
+        this.userRepository = userRepository;
     }
     
     /**
@@ -30,9 +39,11 @@ public class FlashcardService {
      * 
      * @param studyMaterial The text content to generate flashcards from
      * @param count Number of flashcards to generate (default: 5)
+     * @param userId The ID of the user creating the flashcards
+     * @param title The title for the flashcard set
      * @return List of generated flashcards
      */
-    public List<Flashcard> generateFlashcards(String studyMaterial, Integer count) {
+    public List<Flashcard> generateFlashcards(String studyMaterial, Integer count, Long userId, String title) {
         // Default to 5 flashcards if count is not specified
         int numberOfCards = (count != null && count > 0) ? count : 5;
         
@@ -49,7 +60,7 @@ public class FlashcardService {
         List<Flashcard> flashcards = parseFlashcards(aiResponse);
         
         // Save flashcards to database
-        saveFlashcardsToDatabase(flashcards);
+        saveFlashcardsToDatabase(flashcards, studyMaterial, userId, title);
         
         return flashcards;
     }
@@ -57,11 +68,28 @@ public class FlashcardService {
     /**
      * Save generated flashcards to database
      */
-    private void saveFlashcardsToDatabase(List<Flashcard> flashcardDTOs) {
-        for (Flashcard dto : flashcardDTOs) {
+    private void saveFlashcardsToDatabase(List<Flashcard> flashcardDTOs, String studyMaterial, Long userId, String title) {
+        // Get user
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        
+        // Create FlashcardSet
+        FlashcardSet flashcardSet = new FlashcardSet();
+        flashcardSet.setUser(user);
+        flashcardSet.setTitle(title != null ? title : "AI Generated Flashcards");
+        flashcardSet.setStudyMaterial(studyMaterial);
+        
+        // Save FlashcardSet first to get ID
+        FlashcardSet savedSet = flashcardSetRepository.save(flashcardSet);
+        
+        // Create and save individual flashcards
+        for (int i = 0; i < flashcardDTOs.size(); i++) {
+            Flashcard dto = flashcardDTOs.get(i);
             ie.tcd.scss.aichat.model.Flashcard entity = new ie.tcd.scss.aichat.model.Flashcard();
+            entity.setFlashcardSet(savedSet);
             entity.setQuestion(dto.getQuestion());
             entity.setAnswer(dto.getAnswer());
+            entity.setPosition(i);
             flashcardRepository.save(entity);
         }
     }

@@ -33,12 +33,6 @@ public class Course {
     // @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
     // private List<Material> materials;
 
-    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL)
-    private List<QuizSet> quizzeSets;
-
-    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Flashcard> flashcards;
-
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

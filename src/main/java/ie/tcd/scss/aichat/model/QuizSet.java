@@ -29,7 +29,7 @@ public class QuizSet {
     private String studyMaterial;
 
     @Column(nullable = false)
-    private Integer difficulty;
+    private String difficulty;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
@@ -39,10 +39,6 @@ public class QuizSet {
 
     @OneToMany(mappedBy = "quizSet", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<QuizQuestion> questions = new ArrayList<>();
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "course_id", nullable = false)
-    private Course course;
 
     @PrePersist
     protected void onCreate() {
