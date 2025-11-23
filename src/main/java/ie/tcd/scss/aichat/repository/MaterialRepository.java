@@ -7,9 +7,9 @@ import java.util.List;
 @Repository
 public interface MaterialRepository extends JpaRepository<Material, Long> {
     
-    List<Material> findByCourseId(Long courseId);
+    // List<Material> findByCourseId(Long courseId);
     
-    List<Material> findByCourseIdOrderByUploadedAtDesc(Long courseId);
+    // List<Material> findByCourseIdOrderByUploadedAtDesc(Long courseId);
     
-    long countByCourseId(Long courseId);
+    // long countByCourseId(Long courseId);
 }

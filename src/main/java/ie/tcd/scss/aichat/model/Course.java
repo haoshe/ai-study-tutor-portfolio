@@ -30,14 +30,8 @@ public class Course {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Material> materials;
-
-    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL)
-    private List<Quiz> quizzes;
-
-    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Flashcard> flashcards;
+    // @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
+    // private List<Material> materials;
 
     @PrePersist
     protected void onCreate() {

@@ -1,6 +1,10 @@
 package ie.tcd.scss.aichat.service;
 
 import ie.tcd.scss.aichat.dto.Flashcard;
+import ie.tcd.scss.aichat.model.User;
+import ie.tcd.scss.aichat.repository.FlashcardRepository;
+import ie.tcd.scss.aichat.repository.FlashcardSetRepository;
+import ie.tcd.scss.aichat.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,6 +18,7 @@ import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.prompt.Prompt;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -29,12 +34,30 @@ class FlashcardServiceTest {
     @Mock
     private ChatModel chatModel;
     
+    @Mock
+    private FlashcardRepository flashcardRepository;
+    
+    @Mock
+    private FlashcardSetRepository flashcardSetRepository;
+    
+    @Mock
+    private UserRepository userRepository;
+    
     private FlashcardService flashcardService;
     
     @BeforeEach
     void setUp() {
-        // Create service with mocked ChatModel
-        flashcardService = new FlashcardService(chatModel);
+        flashcardService = new FlashcardService(chatModel, flashcardRepository, flashcardSetRepository, userRepository);
+        
+        // Mock user repository to return a test user
+        User testUser = new User();
+        testUser.setId(1L);
+        testUser.setUsername("testuser");
+        lenient().when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+        
+        // Mock repository saves
+        lenient().when(flashcardSetRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(flashcardRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     }
     
     @Test
@@ -62,7 +85,7 @@ class FlashcardServiceTest {
                 It uses dependency injection with @Autowired annotation.
                 Spring follows the Inversion of Control principle.
                 """;
-        List<Flashcard> flashcards = flashcardService.generateFlashcards(studyMaterial, 3);
+        List<Flashcard> flashcards = flashcardService.generateFlashcards(studyMaterial, 3, 1L, "Test Flashcards");
         
         // Then: Verify results
         assertNotNull(flashcards);
@@ -103,7 +126,7 @@ class FlashcardServiceTest {
         );
         
         // When: Generate with null count (should default to 5)
-        List<Flashcard> flashcards = flashcardService.generateFlashcards("test material", null);
+        List<Flashcard> flashcards = flashcardService.generateFlashcards("test material", null, 1L, "Test");
         
         // Then: Verify parsing works
         assertNotNull(flashcards);
@@ -123,7 +146,7 @@ class FlashcardServiceTest {
         );
         
         // When: Generate with 0 count (should default to 5)
-        List<Flashcard> flashcards = flashcardService.generateFlashcards("test", 0);
+        List<Flashcard> flashcards = flashcardService.generateFlashcards("test", 0, 1L, "Test");
         
         // Then: Should still work
         assertNotNull(flashcards);
@@ -147,7 +170,7 @@ class FlashcardServiceTest {
         );
         
         // When
-        List<Flashcard> flashcards = flashcardService.generateFlashcards("Spring MVC study material", 2);
+        List<Flashcard> flashcards = flashcardService.generateFlashcards("Spring MVC study material", 2, 1L, "Spring MVC");
         
         // Then: Should handle multi-line answers
         assertNotNull(flashcards);
@@ -166,7 +189,7 @@ class FlashcardServiceTest {
         );
         
         // When
-        List<Flashcard> flashcards = flashcardService.generateFlashcards("test", 1);
+        List<Flashcard> flashcards = flashcardService.generateFlashcards("test", 1, 1L, "Test");
         
         // Then: Should return empty list, not crash
         assertNotNull(flashcards);
@@ -192,7 +215,7 @@ class FlashcardServiceTest {
         );
         
         // When
-        List<Flashcard> flashcards = flashcardService.generateFlashcards("Spring annotations", 2);
+        List<Flashcard> flashcards = flashcardService.generateFlashcards("Spring annotations", 2, 1L, "Annotations");
         
         // Then: Should trim whitespace
         assertNotNull(flashcards);
