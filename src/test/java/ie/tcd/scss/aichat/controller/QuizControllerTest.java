@@ -1,6 +1,7 @@
 package ie.tcd.scss.aichat.controller;
 
 import ie.tcd.scss.aichat.dto.QuizQuestion;
+import ie.tcd.scss.aichat.service.AuthService;
 import ie.tcd.scss.aichat.service.QuizService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +35,9 @@ class QuizControllerTest {
     @MockBean
     private QuizService quizService;
     
+    @MockBean
+    private AuthService authService;
+    
     @Test
     void testGenerateQuiz_Success() throws Exception {
         // Given: Mock service response
@@ -62,7 +66,7 @@ class QuizControllerTest {
             )
         );
         
-        when(quizService.generateQuiz(anyString(), eq(2), eq("medium")))
+        when(quizService.generateQuiz(anyString(), eq(2), eq("medium"), eq(1L), any(String.class)))
             .thenReturn(mockQuestions);
         
         // When & Then: Make POST request and verify response
@@ -99,7 +103,7 @@ class QuizControllerTest {
             )
         );
         
-        when(quizService.generateQuiz(anyString(), eq(5), eq("medium")))
+        when(quizService.generateQuiz(anyString(), isNull(), eq("medium"), eq(1L), any(String.class)))
             .thenReturn(mockQuestions);
         
         // When & Then: Request without count field
@@ -127,7 +131,7 @@ class QuizControllerTest {
             )
         );
         
-        when(quizService.generateQuiz(anyString(), eq(1), isNull()))
+        when(quizService.generateQuiz(anyString(), eq(1), isNull(), eq(1L), any(String.class)))
             .thenReturn(mockQuestions);
         
         // When & Then: Request without difficulty field
@@ -150,7 +154,7 @@ class QuizControllerTest {
             new QuizQuestion("Easy question?", Arrays.asList("A", "B", "C", "D"), 0, "Easy")
         );
         
-        when(quizService.generateQuiz(anyString(), eq(1), eq("easy")))
+        when(quizService.generateQuiz(anyString(), eq(1), eq("easy"), eq(1L), any(String.class)))
             .thenReturn(mockQuestions);
         
         // When & Then
@@ -173,7 +177,7 @@ class QuizControllerTest {
             new QuizQuestion("Hard question?", Arrays.asList("A", "B", "C", "D"), 0, "Hard")
         );
         
-        when(quizService.generateQuiz(anyString(), eq(1), eq("hard")))
+        when(quizService.generateQuiz(anyString(), eq(1), eq("hard"), eq(1L), any(String.class)))
             .thenReturn(mockQuestions);
         
         // When & Then
@@ -259,7 +263,8 @@ class QuizControllerTest {
         // When & Then: Test the /test endpoint
         mockMvc.perform(get("/api/quiz/test"))
                 .andExpect(status().isOk())
-                .andExpect(content().string("Quiz API is working!"));
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.message", is("Quiz API is working!")));
     }
     
     @Test
@@ -273,7 +278,7 @@ class QuizControllerTest {
             new QuizQuestion("Q5?", Arrays.asList("A", "B", "C", "D"), 0, "E5")
         );
         
-        when(quizService.generateQuiz(anyString(), eq(10), any()))
+        when(quizService.generateQuiz(anyString(), eq(10), any(), eq(1L), any(String.class)))
             .thenReturn(mockQuestions);
         
         // When & Then: Should handle large count

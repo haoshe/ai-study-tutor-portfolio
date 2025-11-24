@@ -1,6 +1,11 @@
 package ie.tcd.scss.aichat.service;
 
 import ie.tcd.scss.aichat.dto.QuizQuestion;
+import ie.tcd.scss.aichat.model.QuizSet;
+import ie.tcd.scss.aichat.model.User;
+import ie.tcd.scss.aichat.repository.QuizSetRepository;
+import ie.tcd.scss.aichat.repository.QuizQuestionRepository;
+import ie.tcd.scss.aichat.repository.UserRepository;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.stereotype.Service;
@@ -11,49 +16,75 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Service for generating multiple-choice quiz questions from study material using OpenAI
- */
 @Service
 public class QuizService {
     
     private final ChatClient chatClient;
+    private final QuizSetRepository quizSetRepository;
+    private final QuizQuestionRepository quizQuestionRepository;
+    private final UserRepository userRepository;
     
-    public QuizService(ChatModel chatModel) {
+    public QuizService(ChatModel chatModel, QuizSetRepository quizSetRepository, 
+                      QuizQuestionRepository quizQuestionRepository, UserRepository userRepository) {
         this.chatClient = ChatClient.builder(chatModel).build();
+        this.quizSetRepository = quizSetRepository;
+        this.quizQuestionRepository = quizQuestionRepository;
+        this.userRepository = userRepository;
     }
     
-    /**
-     * Generate multiple-choice quiz questions from study material using AI
-     * 
-     * @param studyMaterial The text content to generate quiz from
-     * @param count Number of questions to generate (default: 5)
-     * @param difficulty Difficulty level: "easy", "medium", or "hard" (default: "medium")
-     * @return List of generated quiz questions
-     */
-    public List<QuizQuestion> generateQuiz(String studyMaterial, Integer count, String difficulty) {
-        // Default to 5 questions if count is not specified
+    public List<QuizQuestion> generateQuiz(String studyMaterial, Integer count, String difficulty, Long userId, String title) {
         int numberOfQuestions = (count != null && count > 0) ? count : 5;
-        
-        // Default to medium difficulty if not specified
         String difficultyLevel = (difficulty != null) ? difficulty : "medium";
         
-        // Build the prompt for AI
         String prompt = buildQuizPrompt(studyMaterial, numberOfQuestions, difficultyLevel);
         
-        // Call OpenAI API
         String aiResponse = chatClient.prompt()
                 .user(prompt)
                 .call()
                 .content();
         
-        // Parse AI response into quiz question objects
-        return parseQuizQuestions(aiResponse);
+        List<QuizQuestion> questions = parseQuizQuestions(aiResponse);
+        saveQuizToDatabase(questions, studyMaterial, difficultyLevel, userId, title);
+        
+        return questions;
     }
     
-    /**
-     * Build the prompt for OpenAI to generate quiz questions
-     */
+    private void saveQuizToDatabase(List<QuizQuestion> questionDTOs, String studyMaterial, String difficulty, Long userId, String title) {
+        // Get user
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        
+        QuizSet quizSet = new QuizSet();
+        quizSet.setUser(user);
+        quizSet.setTitle(title != null ? title : "AI Generated Quiz");
+        quizSet.setStudyMaterial(studyMaterial);
+        quizSet.setDifficulty(difficulty);
+        
+        QuizSet savedQuizSet = quizSetRepository.save(quizSet);
+        
+        for (int i = 0; i < questionDTOs.size(); i++) {
+            QuizQuestion dto = questionDTOs.get(i);
+            ie.tcd.scss.aichat.model.QuizQuestion entity = new ie.tcd.scss.aichat.model.QuizQuestion();
+            entity.setQuestion(dto.getQuestion());
+            
+            List<String> options = dto.getOptions();
+            if (options.size() >= 4) {
+                entity.setOptionA(options.get(0));
+                entity.setOptionB(options.get(1));
+                entity.setOptionC(options.get(2));
+                entity.setOptionD(options.get(3));
+            }
+            
+            char correctLetter = (char) ('A' + dto.getCorrectAnswer());
+            entity.setCorrectAnswer(String.valueOf(correctLetter));
+            entity.setExplanation(dto.getExplanation());
+            entity.setPosition(i);
+            entity.setQuizSet(savedQuizSet);
+            
+            quizQuestionRepository.save(entity);
+        }
+    }
+    
     private String buildQuizPrompt(String studyMaterial, int count, String difficulty) {
         String difficultyInstructions = getDifficultyInstructions(difficulty);
         
@@ -94,33 +125,16 @@ return String.format("""
             """, count, studyMaterial, count, difficultyInstructions, count);
     }
     
-    /**
-     * Get difficulty-specific instructions for the AI prompt
-     */
     private String getDifficultyInstructions(String difficulty) {
         return switch (difficulty.toLowerCase()) {
-            case "easy" -> "Questions should test basic recall and recognition of facts";
-            case "hard" -> "Questions should require analysis, evaluation, and deep understanding";
-            default -> "Questions should test understanding and application of concepts";
+            case "easy" -> "Questions should test basic recall";
+            case "hard" -> "Questions should require deep analysis";
+            default -> "Questions should test understanding";
         };
     }
     
-    /**
-     * Parse AI response into list of QuizQuestion objects
-     * Expected format:
-     * Q: question text
-     * A: option A
-     * B: option B
-     * C: option C
-     * D: option D
-     * CORRECT: A/B/C/D
-     * EXPLAIN: explanation text
-     */
     private List<QuizQuestion> parseQuizQuestions(String aiResponse) {
         List<QuizQuestion> questions = new ArrayList<>();
-        
-        // Pattern to match the quiz format
-        // Captures: question, optionA, optionB, optionC, optionD, correct, explanation
         Pattern pattern = Pattern.compile(
             "Q:\\s*(.+?)\\s*A:\\s*(.+?)\\s*B:\\s*(.+?)\\s*C:\\s*(.+?)\\s*D:\\s*(.+?)\\s*CORRECT:\\s*([A-D])\\s*EXPLAIN:\\s*(.+?)(?=Q:|$)",
             Pattern.DOTALL
@@ -130,77 +144,16 @@ return String.format("""
         
         while (matcher.find()) {
             String question = matcher.group(1).trim();
-            String optionA = matcher.group(2).trim();
-            String optionB = matcher.group(3).trim();
-            String optionC = matcher.group(4).trim();
-            String optionD = matcher.group(5).trim();
-            String correctLetter = matcher.group(6).trim();
+            List<String> options = Arrays.asList(
+                matcher.group(2).trim(),
+                matcher.group(3).trim(),
+                matcher.group(4).trim(),
+                matcher.group(5).trim()
+            );
+            int correctIndex = matcher.group(6).trim().charAt(0) - 'A';
             String explanation = matcher.group(7).trim();
             
-            // Convert letter to index (A=0, B=1, C=2, D=3)
-            int correctIndex = correctLetter.charAt(0) - 'A';
-            
-            // Create options list
-            List<String> options = Arrays.asList(optionA, optionB, optionC, optionD);
-            
             questions.add(new QuizQuestion(question, options, correctIndex, explanation));
-        }
-        
-        // Fallback: try simpler parsing if regex fails
-        if (questions.isEmpty()) {
-            questions = parseQuizQuestionsSimple(aiResponse);
-        }
-        
-        return questions;
-    }
-    
-    /**
-     * Simple fallback parser for quiz questions
-     */
-    private List<QuizQuestion> parseQuizQuestionsSimple(String aiResponse) {
-        List<QuizQuestion> questions = new ArrayList<>();
-        String[] lines = aiResponse.split("\n");
-        
-        String currentQuestion = null;
-        List<String> currentOptions = new ArrayList<>();
-        int correctIndex = -1;
-        String explanation = null;
-        
-        for (String line : lines) {
-            line = line.trim();
-            
-            if (line.startsWith("Q:")) {
-                // Save previous question if exists
-                if (currentQuestion != null && currentOptions.size() == 4) {
-                    questions.add(new QuizQuestion(currentQuestion, new ArrayList<>(currentOptions), correctIndex, explanation));
-                }
-                // Start new question
-                currentQuestion = line.substring(2).trim();
-                currentOptions.clear();
-                correctIndex = -1;
-                explanation = null;
-                
-            } else if (line.startsWith("A:")) {
-                currentOptions.add(line.substring(2).trim());
-            } else if (line.startsWith("B:")) {
-                currentOptions.add(line.substring(2).trim());
-            } else if (line.startsWith("C:")) {
-                currentOptions.add(line.substring(2).trim());
-            } else if (line.startsWith("D:")) {
-                currentOptions.add(line.substring(2).trim());
-            } else if (line.startsWith("CORRECT:")) {
-                String correctLetter = line.substring(8).trim();
-                if (!correctLetter.isEmpty()) {
-                    correctIndex = correctLetter.charAt(0) - 'A';
-                }
-            } else if (line.startsWith("EXPLAIN:")) {
-                explanation = line.substring(8).trim();
-            }
-        }
-        
-        // Add last question if exists
-        if (currentQuestion != null && currentOptions.size() == 4) {
-            questions.add(new QuizQuestion(currentQuestion, new ArrayList<>(currentOptions), correctIndex, explanation));
         }
         
         return questions;

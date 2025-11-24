@@ -1,6 +1,7 @@
 package ie.tcd.scss.aichat.controller;
 
 import ie.tcd.scss.aichat.dto.Flashcard;
+import ie.tcd.scss.aichat.service.AuthService;
 import ie.tcd.scss.aichat.service.FlashcardService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +40,9 @@ class FlashcardControllerTest {
     @MockBean
     private FlashcardService flashcardService;
     
+    @MockBean
+    private AuthService authService;
+    
     @Test
     void testGenerateFlashcards_Success() throws Exception {
         // Given: Mock service response
@@ -48,7 +52,7 @@ class FlashcardControllerTest {
             new Flashcard("What is Inversion of Control?", "A design principle where the framework controls object creation and lifecycle")
         );
         
-        when(flashcardService.generateFlashcards(any(String.class), eq(3)))
+        when(flashcardService.generateFlashcards(any(String.class), eq(3), eq(1L), any(String.class)))
             .thenReturn(mockFlashcards);
         
         // When & Then: Make POST request and verify response
@@ -80,7 +84,7 @@ class FlashcardControllerTest {
             new Flashcard("Question 2?", "Answer 2")
         );
         
-        when(flashcardService.generateFlashcards(any(String.class), eq(5)))
+        when(flashcardService.generateFlashcards(any(String.class), eq(null), eq(1L), any(String.class)))
             .thenReturn(mockFlashcards);
         
         // When & Then: Request without count field
@@ -162,7 +166,7 @@ class FlashcardControllerTest {
             new Flashcard("What does Spring Boot provide?", "Auto-configuration for rapid development")
         );
         
-        when(flashcardService.generateFlashcards(eq(longMaterial), eq(1)))
+        when(flashcardService.generateFlashcards(eq(longMaterial), eq(1), eq(1L), any(String.class)))
             .thenReturn(mockFlashcards);
         
         // When & Then: Should handle long text

@@ -15,21 +15,16 @@ public class Flashcard {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "set_id", nullable = false)
+    private FlashcardSet flashcardSet;
+
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String question;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String answer;
 
     @Column(nullable = false)
-    private LocalDateTime createdAt;
-
-    @ManyToOne
-    @JoinColumn(name = "course_id", nullable = false)
-    private Course course;
-
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-    }
+    private Integer position;
 }

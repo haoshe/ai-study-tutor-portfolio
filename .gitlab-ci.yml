@@ -1,11 +1,8 @@
-image: maven:3.9.11-eclipse-temurin-21-alpine
+image: maven:3.9.11-eclipse-temurin-21
 
 cache:
   paths:
     - .m2/repository
-
-variables:
-  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"    
 
 stages:
   - build
@@ -16,17 +13,51 @@ build:
   tags:
     - docker 
   script:
-    - mvn clean compile
+    - mvn clean compile -DskipTests
   artifacts:
     paths:
       - target/
+    expire_in: 1 hour
 
 test:
   stage: test
   tags:
     - docker 
+  services:
+    - name: mysql:8.0
+      alias: mysql
+  variables:
+    DB_HOST: mysql
+    DB_PORT: 3306
+    DB_NAME: aichat_db
+    DB_USERNAME: testuser
+    DB_PASSWORD: testpass
+    MYSQL_DATABASE: aichat_db
+    MYSQL_USER: testuser
+    MYSQL_PASSWORD: testpass
+    MYSQL_ROOT_PASSWORD: rootpass
+    SPRING_AI_OPENAI_API_KEY: test-key
+  before_script:
+    # Install MySQL client for health check
+    - apt-get update && apt-get install -y default-mysql-client
+    # Wait for MySQL to be ready (max 60 seconds)
+    - |
+      for i in {1..30}; do
+        if mysqladmin ping -h mysql -u root -p${MYSQL_ROOT_PASSWORD} --silent 2>/dev/null; then
+          echo "MySQL is ready!"
+          break
+        fi
+        echo "Waiting for MySQL... ($i/30)"
+        sleep 2
+      done
+    # Verify database exists
+    - mysql -h mysql -u root -p${MYSQL_ROOT_PASSWORD} -e "SHOW DATABASES;"
   script:
     - mvn test
   artifacts:
+    when: always
     reports:
       junit: target/surefire-reports/TEST-*.xml
+    paths:
+      - target/surefire-reports/
+    expire_in: 1 week

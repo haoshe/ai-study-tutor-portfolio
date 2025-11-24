@@ -1,6 +1,11 @@
 package ie.tcd.scss.aichat.service;
 
 import ie.tcd.scss.aichat.dto.Flashcard;
+import ie.tcd.scss.aichat.model.FlashcardSet;
+import ie.tcd.scss.aichat.model.User;
+import ie.tcd.scss.aichat.repository.FlashcardRepository;
+import ie.tcd.scss.aichat.repository.FlashcardSetRepository;
+import ie.tcd.scss.aichat.repository.UserRepository;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.stereotype.Service;
@@ -17,9 +22,16 @@ import java.util.regex.Pattern;
 public class FlashcardService {
     
     private final ChatClient chatClient;
-    
-    public FlashcardService(ChatModel chatModel) {
+    private final FlashcardRepository flashcardRepository;
+    private final FlashcardSetRepository flashcardSetRepository;
+    private final UserRepository userRepository;
+
+    public FlashcardService(ChatModel chatModel, FlashcardRepository flashcardRepository, 
+                          FlashcardSetRepository flashcardSetRepository, UserRepository userRepository) {
         this.chatClient = ChatClient.builder(chatModel).build();
+        this.flashcardRepository = flashcardRepository;
+        this.flashcardSetRepository = flashcardSetRepository;
+        this.userRepository = userRepository;
     }
     
     /**
@@ -27,9 +39,11 @@ public class FlashcardService {
      * 
      * @param studyMaterial The text content to generate flashcards from
      * @param count Number of flashcards to generate (default: 5)
+     * @param userId The ID of the user creating the flashcards
+     * @param title The title for the flashcard set
      * @return List of generated flashcards
      */
-    public List<Flashcard> generateFlashcards(String studyMaterial, Integer count) {
+    public List<Flashcard> generateFlashcards(String studyMaterial, Integer count, Long userId, String title) {
         // Default to 5 flashcards if count is not specified
         int numberOfCards = (count != null && count > 0) ? count : 5;
         
@@ -43,7 +57,41 @@ public class FlashcardService {
                 .content();
         
         // Parse AI response into flashcard objects
-        return parseFlashcards(aiResponse);
+        List<Flashcard> flashcards = parseFlashcards(aiResponse);
+        
+        // Save flashcards to database
+        saveFlashcardsToDatabase(flashcards, studyMaterial, userId, title);
+        
+        return flashcards;
+    }
+    
+    /**
+     * Save generated flashcards to database
+     */
+    private void saveFlashcardsToDatabase(List<Flashcard> flashcardDTOs, String studyMaterial, Long userId, String title) {
+        // Get user
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        
+        // Create FlashcardSet
+        FlashcardSet flashcardSet = new FlashcardSet();
+        flashcardSet.setUser(user);
+        flashcardSet.setTitle(title != null ? title : "AI Generated Flashcards");
+        flashcardSet.setStudyMaterial(studyMaterial);
+        
+        // Save FlashcardSet first to get ID
+        FlashcardSet savedSet = flashcardSetRepository.save(flashcardSet);
+        
+        // Create and save individual flashcards
+        for (int i = 0; i < flashcardDTOs.size(); i++) {
+            Flashcard dto = flashcardDTOs.get(i);
+            ie.tcd.scss.aichat.model.Flashcard entity = new ie.tcd.scss.aichat.model.Flashcard();
+            entity.setFlashcardSet(savedSet);
+            entity.setQuestion(dto.getQuestion());
+            entity.setAnswer(dto.getAnswer());
+            entity.setPosition(i);
+            flashcardRepository.save(entity);
+        }
     }
     
     /**
@@ -51,31 +99,24 @@ public class FlashcardService {
      */
     private String buildFlashcardPrompt(String studyMaterial, int count) {
         return String.format("""
-                Generate UP TO %d flashcards from the following study material.
+                Generate %d flashcards from the following study material.
                 
                 Study Material:
                 %s
                 
                 Instructions:
-                - **CRITICAL: Only use information from the provided study material above**
-                - **DO NOT use outside knowledge or general topics**
-                - **CRITICAL: DO NOT generate repetitive or duplicate flashcards**
-                - **CRITICAL: If you can only generate fewer than %d UNIQUE flashcards from the material, generate only as many as you can without repetition**
-                - **Quality over quantity - it's better to generate 2 unique flashcards than 8 repetitive ones**
-                - Create clear, concise questions that test key concepts FROM THE MATERIAL
-                - Provide accurate, complete answers BASED ONLY ON THE MATERIAL
-                - Focus on the most important information IN THE PROVIDED TEXT
+                - Create clear, concise questions that test key concepts
+                - Provide accurate, complete answers
+                - Focus on the most important information
                 - Make questions specific and unambiguous
-                - Each flashcard should test a DIFFERENT concept or piece of information
-                - If the study material doesn't contain educational content, return an error message
                 
                 Format each flashcard EXACTLY like this:
                 Q: [Your question here]
                 A: [Your answer here]
                 
-                Generate UP TO %d unique, non-repetitive flashcards now:
-                """, count, studyMaterial, count, count);
-}
+                Generate %d flashcards now:
+                """, count, studyMaterial, count);
+    }
     
     /**
      * Parse AI response into list of Flashcard objects

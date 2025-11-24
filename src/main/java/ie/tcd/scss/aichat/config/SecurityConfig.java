@@ -18,11 +18,13 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/quiz/**").permitAll()       // Allow public access to quiz API
-                .requestMatchers("/api/flashcards/**").permitAll() // Allow public access to flashcard API
-                .anyRequest().authenticated()                       // All other endpoints require authentication
+                .requestMatchers("/api/auth/**").permitAll()       // Allow public access to authentication endpoints
+                .requestMatchers("/api/quiz/**").permitAll()        // Temporary: Allow public access to quiz API (will secure in Job 3)
+                .requestMatchers("/api/flashcards/**").permitAll()  // Temporary: Allow public access to flashcard API (will secure in Job 3)
+                .requestMatchers("/api/quizzes/**").permitAll()     // Temporary: Allow public access to quiz storage API (will secure in Job 3)
+                .anyRequest().authenticated()                        // All other endpoints require authentication
             )
-            .csrf(csrf -> csrf.disable()); // Disable CSRF for API testing (re-enable for production)
+            .csrf(csrf -> csrf.disable());  // Disable CSRF for API (required for REST API with JWT)
         
         return http.build();
     }

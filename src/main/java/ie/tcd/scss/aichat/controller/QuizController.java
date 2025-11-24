@@ -1,89 +1,94 @@
 package ie.tcd.scss.aichat.controller;
 
 import ie.tcd.scss.aichat.dto.QuizQuestion;
-import ie.tcd.scss.aichat.dto.QuizRequest;
-import ie.tcd.scss.aichat.dto.QuizResponse;
+import ie.tcd.scss.aichat.model.User;
+import ie.tcd.scss.aichat.service.AuthService;
 import ie.tcd.scss.aichat.service.QuizService;
-import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-/**
- * REST Controller for quiz generation
- * Provides endpoints for generating multiple-choice quizzes from study material
- */
 @RestController
 @RequestMapping("/api/quiz")
-@RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class QuizController {
     
     private final QuizService quizService;
+    private final AuthService authService;
     
-    /**
-     * Generate multiple-choice quiz questions from study material
-     * 
-     * POST /api/quiz/generate
-     * Request body:
-     * {
-     *   "studyMaterial": "Your study content here...",
-     *   "count": 5,
-     *   "difficulty": "medium"
-     * }
-     * 
-     * @param request QuizRequest containing study material, count, and difficulty
-     * @return QuizResponse with generated quiz questions and optional warning
-     */
-    @PostMapping("/generate")
-    public ResponseEntity<QuizResponse> generateQuiz(@RequestBody QuizRequest request) {
-        // Validate input
-        if (request.getStudyMaterial() == null || request.getStudyMaterial().trim().isEmpty()) {
-            return ResponseEntity.badRequest().build();
-        }
-        
-        // Validate difficulty if provided
-        if (request.getDifficulty() != null) {
-            String difficulty = request.getDifficulty().toLowerCase();
-            if (!difficulty.equals("easy") && !difficulty.equals("medium") && !difficulty.equals("hard")) {
-                return ResponseEntity.badRequest().build();
-            }
-        }
-        
-        int requestedCount = request.getCount() != null ? request.getCount() : 5;
-        
-        // Generate quiz using AI
-        List<QuizQuestion> questions = quizService.generateQuiz(
-            request.getStudyMaterial(),
-            requestedCount,
-            request.getDifficulty()
-        );
-        
-        // Determine warning message
-        String warning = null;
-        if (questions.isEmpty()) {
-            warning = "Unable to generate quiz questions. The study material may be too short, repetitive, or lack educational content. Please provide more substantial material.";
-        } else if (questions.size() < requestedCount) {
-            warning = String.format(
-                "You requested %d questions, but we could only generate %d based on your study material. To get more questions, please provide more content.",
-                requestedCount, questions.size()
-            );
-        }
-        
-        // Create response with questions and optional warning
-        QuizResponse response = new QuizResponse(questions, warning);
-        return ResponseEntity.ok(response);
+    public QuizController(QuizService quizService, AuthService authService) {
+        this.quizService = quizService;
+        this.authService = authService;
     }
     
-    /**
-     * Simple test endpoint to verify the controller is working
-     * 
-     * GET /api/quiz/test
-     * 
-     * @return A simple test message
-     */
+    @PostMapping("/generate")
+    public ResponseEntity<?> generateQuiz(
+            @RequestBody Map<String, Object> request,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        
+        // Validation
+        String studyMaterial = (String) request.get("studyMaterial");
+        if (studyMaterial == null || studyMaterial.trim().isEmpty()) {
+            return ResponseEntity.badRequest()
+                .body(Map.of("error", "Study material is required and cannot be empty"));
+        }
+        
+        // Support both "count" and "questionCount" for backward compatibility
+        Integer questionCount = request.containsKey("count") ? 
+            (Integer) request.get("count") : 
+            (Integer) request.get("questionCount");
+        String difficulty = (String) request.get("difficulty");
+        
+        // Validate difficulty if provided
+        if (difficulty != null && !Arrays.asList("easy", "medium", "hard").contains(difficulty.toLowerCase())) {
+            return ResponseEntity.badRequest()
+                .body(Map.of("error", "Invalid difficulty. Must be 'easy', 'medium', or 'hard'"));
+        }
+        
+        // Extract user from JWT token (temporary: use default user if not authenticated)
+        Long userId = null;
+        String title = "AI Generated Quiz";
+        
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            try {
+                User user = authService.getUserFromToken(token);
+                userId = user.getId();
+            } catch (Exception e) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Unauthorized"));
+            }
+        } else {
+            // For now, allow unauthenticated requests for testing (use user ID 1)
+            userId = 1L;
+        }
+        
+        try {
+            List<QuizQuestion> questions = quizService.generateQuiz(studyMaterial, questionCount, difficulty, userId, title);
+            Map<String, Object> response = new HashMap<>();
+            response.put("questions", questions);
+
+            // Optional warning if fewer questions generated than requested
+            if (questionCount != null && questions.size() < questionCount) {
+                response.put("warning", String.format(
+                    "You requested %d questions but only %d could be generated.",
+                    questionCount, questions.size()
+                ));
+            }
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Failed to generate quiz: " + e.getMessage()));
+        }
+    }
+    
     @GetMapping("/test")
-    public ResponseEntity<String> test() {
-        return ResponseEntity.ok("Quiz API is working!");
+    public ResponseEntity<Map<String, String>> testEndpoint() {
+        return ResponseEntity.ok(Map.of("message", "Quiz API is working!"));
     }
 }

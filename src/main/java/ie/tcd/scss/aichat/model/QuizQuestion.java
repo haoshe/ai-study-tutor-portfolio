@@ -15,6 +15,10 @@ public class QuizQuestion {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "quiz_set_id", nullable = false)
+    private QuizSet quizSet;
+
     @Column(nullable = false, columnDefinition = "TEXT")
     private String question;
 
@@ -35,8 +39,7 @@ public class QuizQuestion {
 
     @Column(columnDefinition = "TEXT")
     private String explanation;
-    
-    @ManyToOne
-    @JoinColumn(name = "quiz_id", nullable = false)
-    private Quiz quiz;
+
+    @Column(nullable = false)
+    private Integer position;
 }

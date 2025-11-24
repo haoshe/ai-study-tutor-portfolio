@@ -1,6 +1,10 @@
 package ie.tcd.scss.aichat.service;
 
 import ie.tcd.scss.aichat.dto.QuizQuestion;
+import ie.tcd.scss.aichat.model.User;
+import ie.tcd.scss.aichat.repository.QuizSetRepository;
+import ie.tcd.scss.aichat.repository.QuizQuestionRepository;
+import ie.tcd.scss.aichat.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,6 +17,7 @@ import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.prompt.Prompt;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -28,11 +33,30 @@ class QuizServiceTest {
     @Mock
     private ChatModel chatModel;
     
+    @Mock
+    private QuizSetRepository quizSetRepository;
+    
+    @Mock
+    private QuizQuestionRepository quizQuestionRepository;
+    
+    @Mock
+    private UserRepository userRepository;
+    
     private QuizService quizService;
     
     @BeforeEach
     void setUp() {
-        quizService = new QuizService(chatModel);
+        quizService = new QuizService(chatModel, quizSetRepository, quizQuestionRepository, userRepository);
+        
+        // Mock user repository to return a test user
+        User testUser = new User();
+        testUser.setId(1L);
+        testUser.setUsername("testuser");
+        lenient().when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+        
+        // Mock repository saves
+        lenient().when(quizSetRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(quizQuestionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     }
     
     @Test
@@ -70,7 +94,7 @@ class QuizServiceTest {
         
         // When: Generate quiz
         String studyMaterial = "Spring Boot is an open-source Java framework...";
-        List<QuizQuestion> questions = quizService.generateQuiz(studyMaterial, 3, "medium");
+        List<QuizQuestion> questions = quizService.generateQuiz(studyMaterial, 3, "medium", 1L, "Spring Boot Quiz");
         
         // Then: Verify results
         assertNotNull(questions);
@@ -116,7 +140,7 @@ class QuizServiceTest {
         );
         
         // When: Generate with null count (should default to 5)
-        List<QuizQuestion> questions = quizService.generateQuiz("test material", null, "medium");
+        List<QuizQuestion> questions = quizService.generateQuiz("test material", null, "medium", 1L, "Test Quiz");
         
         // Then: Should work and return parsed questions
         assertNotNull(questions);
@@ -141,7 +165,7 @@ class QuizServiceTest {
         );
         
         // When: Generate with null difficulty (should default to "medium")
-        List<QuizQuestion> questions = quizService.generateQuiz("test", 1, null);
+        List<QuizQuestion> questions = quizService.generateQuiz("test", 1, null, 1L, "Test Quiz");
         
         // Then: Should work
         assertNotNull(questions);
@@ -166,9 +190,9 @@ class QuizServiceTest {
         );
         
         // When: Test each difficulty level
-        List<QuizQuestion> easyQuiz = quizService.generateQuiz("test", 1, "easy");
-        List<QuizQuestion> mediumQuiz = quizService.generateQuiz("test", 1, "medium");
-        List<QuizQuestion> hardQuiz = quizService.generateQuiz("test", 1, "hard");
+        List<QuizQuestion> easyQuiz = quizService.generateQuiz("test", 1, "easy", 1L, "Easy Quiz");
+        List<QuizQuestion> mediumQuiz = quizService.generateQuiz("test", 1, "medium", 1L, "Medium Quiz");
+        List<QuizQuestion> hardQuiz = quizService.generateQuiz("test", 1, "hard", 1L, "Hard Quiz");
         
         // Then: All should work
         assertNotNull(easyQuiz);
@@ -213,7 +237,7 @@ class QuizServiceTest {
         );
         
         // When
-        List<QuizQuestion> questions = quizService.generateQuiz("test", 3, "medium");
+        List<QuizQuestion> questions = quizService.generateQuiz("test", 3, "medium", 1L, "Test Quiz");
         
         // Then: Verify correct answer indices
         assertNotNull(questions);
@@ -231,7 +255,7 @@ class QuizServiceTest {
         );
         
         // When
-        List<QuizQuestion> questions = quizService.generateQuiz("test", 1, "medium");
+        List<QuizQuestion> questions = quizService.generateQuiz("test", 1, "medium", 1L, "Test Quiz");
         
         // Then: Should return empty list, not crash
         assertNotNull(questions);
@@ -258,7 +282,7 @@ class QuizServiceTest {
         );
         
         // When
-        List<QuizQuestion> questions = quizService.generateQuiz("test", 1, "medium");
+        List<QuizQuestion> questions = quizService.generateQuiz("test", 1, "medium", 1L, "Test Quiz");
         
         // Then: Should trim whitespace properly
         assertNotNull(questions);
