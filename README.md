@@ -53,7 +53,26 @@ AI QUIZ AND FLASHCARD GENERATION ONLY WORK ON OPEN AI NO OTHER AIs
    * Get OpenAI API key
    * AI API calls require valid OPENAI_API_KEY AND ENOUGH CREDIT
    * Set as environment variable
-3. Run backend:
+
+3. Database Setup (MySQL)
+
+Before starting the backend, run this script to create the database, user, and permissions:
+
+   * Make the setup script executable:
+   
+   chmod +x setup-database.sh
+
+   * Run the script:
+   
+   ./setup-database.sh
+
+This script will:
+create the aichat_db database
+create the MySQL user aichat_user with password aichat_pass
+grant all required privileges
+
+4. Run backend:
+   
    mvn spring-boot:run
 
    * Runs on port 8080
