@@ -3,7 +3,7 @@ import './StudyAssistant.css';
 
 const API_BASE_URL = ''; // Empty because we're using proxy
 
-function StudyAssistant() {
+function StudyAssistant({userId}) {
   // Study Material States
   const [studyMaterial, setStudyMaterial] = useState('');
   const [uploadedContent, setUploadedContent] = useState('');
@@ -28,6 +28,15 @@ function StudyAssistant() {
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('flashcards');
   const [loadingType, setLoadingType] = useState('');
+
+  // helper function to get auth headers for login
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    };
+  };
 
   // Flashcard Functions
   const toggleAnswer = (index) => {
@@ -171,13 +180,24 @@ function StudyAssistant() {
       const response = await fetch(`${API_BASE_URL}/api/flashcards/generate`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json', 
+           ...getAuthHeaders(),
         },
         body: JSON.stringify({
           studyMaterial: contentToUse,
-          count: flashcardCount
+          count: flashcardCount,
+          userId: userId, 
+          title: 'AI Generated Flashcards' 
         })
       });
+
+      if (response.status === 401) {
+        // Token expired or invalid
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.reload(); // Redirect to login
+        return;
+      }
 
       if (!response.ok) {
         throw new Error(`Flashcards failed to generate (${response.status}). The source material may be too short or unsupported.`);
@@ -237,13 +257,24 @@ function StudyAssistant() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+           ...getAuthHeaders(),
         },
         body: JSON.stringify({
           studyMaterial: contentToUse,
           count: quizCount, 
-          difficulty: difficulty
+          difficulty: difficulty,
+          userId: userId,
+          title: 'AI Generated Quiz'
         })
       });
+
+       if (response.status === 401) {
+        // Token expired or invalid
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.reload(); // Redirect to login
+        return;
+      }
 
       if (!response.ok) {
         throw new Error(`Quiz failed to generate (${response.status}). The source material may be too short or unsupported.`);
