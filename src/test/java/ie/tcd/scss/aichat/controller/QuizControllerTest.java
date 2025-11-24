@@ -81,13 +81,14 @@ class QuizControllerTest {
                     """))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$", hasSize(2)))
-                .andExpect(jsonPath("$[0].question", is("What is Spring Boot?")))
-                .andExpect(jsonPath("$[0].options", hasSize(4)))
-                .andExpect(jsonPath("$[0].correctAnswer", is(0)))
-                .andExpect(jsonPath("$[0].explanation", containsString("Spring Boot")))
-                .andExpect(jsonPath("$[1].question", is("What does @Autowired do?")))
-                .andExpect(jsonPath("$[1].correctAnswer", is(0)));
+                .andExpect(jsonPath("$.questions", hasSize(2)))
+                .andExpect(jsonPath("$.questions[0].question", is("What is Spring Boot?")))
+                .andExpect(jsonPath("$.questions[0].options", hasSize(4)))
+                .andExpect(jsonPath("$.questions[0].correctAnswer", is(0)))
+                .andExpect(jsonPath("$.questions[0].explanation", containsString("Spring Boot")))
+                .andExpect(jsonPath("$.questions[1].question", is("What does @Autowired do?")))
+                .andExpect(jsonPath("$.questions[1].correctAnswer", is(0)))
+                .andExpect(jsonPath("$.warning").doesNotExist());
     }
     
     @Test
@@ -115,7 +116,7 @@ class QuizControllerTest {
                     }
                     """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)));
+                .andExpect(jsonPath("$.questions", hasSize(1)));
     }
     
     @Test
@@ -143,7 +144,7 @@ class QuizControllerTest {
                     }
                     """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)));
+                .andExpect(jsonPath("$.questions", hasSize(1)));
     }
     
     @Test
@@ -290,6 +291,6 @@ class QuizControllerTest {
                     }
                     """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(5)));
+                .andExpect(jsonPath("$.questions", hasSize(5)));
     }
 }

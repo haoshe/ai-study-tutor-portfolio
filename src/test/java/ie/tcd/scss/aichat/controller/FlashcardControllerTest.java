@@ -31,7 +31,7 @@ import static org.hamcrest.Matchers.*;
 // FlashcardController tests. This ensures that the controller can be tested without
 // authentication requirements.
 // Contributor: Tomas A.
-@AutoConfigureMockMvc(addFilters = false) // <--
+@AutoConfigureMockMvc(addFilters = false)
 class FlashcardControllerTest {
     
     @Autowired
@@ -66,13 +66,14 @@ class FlashcardControllerTest {
                     """))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$", hasSize(3)))
-                .andExpect(jsonPath("$[0].question", is("What is Spring Boot?")))
-                .andExpect(jsonPath("$[0].answer", is("An open-source Java framework for building production-ready applications")))
-                .andExpect(jsonPath("$[1].question", is("What does @Autowired do?")))
-                .andExpect(jsonPath("$[1].answer", is("It enables automatic dependency injection in Spring")))
-                .andExpect(jsonPath("$[2].question", is("What is Inversion of Control?")))
-                .andExpect(jsonPath("$[2].answer", is("A design principle where the framework controls object creation and lifecycle")));
+                .andExpect(jsonPath("$.flashcards", hasSize(3)))
+                .andExpect(jsonPath("$.flashcards[0].question", is("What is Spring Boot?")))
+                .andExpect(jsonPath("$.flashcards[0].answer", is("An open-source Java framework for building production-ready applications")))
+                .andExpect(jsonPath("$.flashcards[1].question", is("What does @Autowired do?")))
+                .andExpect(jsonPath("$.flashcards[1].answer", is("It enables automatic dependency injection in Spring")))
+                .andExpect(jsonPath("$.flashcards[2].question", is("What is Inversion of Control?")))
+                .andExpect(jsonPath("$.flashcards[2].answer", is("A design principle where the framework controls object creation and lifecycle")))
+                .andExpect(jsonPath("$.warning").doesNotExist());
     }
     
     @Test
@@ -95,7 +96,7 @@ class FlashcardControllerTest {
                     }
                     """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(2)));
+                .andExpect(jsonPath("$.flashcards", hasSize(2)));
     }
     
     @Test
@@ -178,6 +179,6 @@ class FlashcardControllerTest {
                     }
                     """, longMaterial)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)));
+                .andExpect(jsonPath("$.flashcards", hasSize(1)));
     }
 }

@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -69,7 +70,17 @@ public class QuizController {
         
         try {
             List<QuizQuestion> questions = quizService.generateQuiz(studyMaterial, questionCount, difficulty, userId, title);
-            return ResponseEntity.ok(questions);
+            Map<String, Object> response = new HashMap<>();
+            response.put("questions", questions);
+
+            // Optional warning if fewer questions generated than requested
+            if (questionCount != null && questions.size() < questionCount) {
+                response.put("warning", String.format(
+                    "You requested %d questions but only %d could be generated.",
+                    questionCount, questions.size()
+                ));
+            }
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", "Failed to generate quiz: " + e.getMessage()));
