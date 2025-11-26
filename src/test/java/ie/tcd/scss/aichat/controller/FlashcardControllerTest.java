@@ -1,61 +1,82 @@
 package ie.tcd.scss.aichat.controller;
 
 import ie.tcd.scss.aichat.dto.Flashcard;
+import ie.tcd.scss.aichat.model.User;
+import ie.tcd.scss.aichat.repository.UserRepository;
 import ie.tcd.scss.aichat.service.AuthService;
 import ie.tcd.scss.aichat.service.FlashcardService;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
+import java.util.Optional;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.hamcrest.Matchers.*;
 
-/**
- * Integration test for FlashcardController
- * Uses MockMvc to test REST API without starting full server
- * 
- */
-
-@WebMvcTest(FlashcardController.class)
-// Security filters are disabled for this test class to prevent 401/403 responses during
-// FlashcardController tests. This ensures that the controller can be tested without
-// authentication requirements.
-// Contributor: Tomas A.
-@AutoConfigureMockMvc(addFilters = false) // <--
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("test")  
 class FlashcardControllerTest {
-    
+
     @Autowired
     private MockMvc mockMvc;
-    
+
     @MockBean
     private FlashcardService flashcardService;
-    
+
     @MockBean
     private AuthService authService;
+
+    @MockBean
+    private UserRepository userRepository;
+
+    private User testUser;
+
+    @BeforeEach
+    void setUp() {
+    testUser = new User();
+    testUser.setId(1L);
+    testUser.setUsername("testuser");
+    testUser.setEmail("test@example.com");
     
+    UsernamePasswordAuthenticationToken authentication =
+            new UsernamePasswordAuthenticationToken(testUser, null, List.of());
+    SecurityContextHolder.getContext().setAuthentication(authentication);
+    
+    // Add this
+    when(userRepository.findByUsername("testuser"))
+            .thenReturn(Optional.of(testUser));
+    when(userRepository.findById(1L))
+            .thenReturn(Optional.of(testUser));
+    }
+
     @Test
+    @WithMockUser(username = "testuser", roles = {"USER"})
     void testGenerateFlashcards_Success() throws Exception {
-        // Given: Mock service response
         List<Flashcard> mockFlashcards = List.of(
             new Flashcard("What is Spring Boot?", "An open-source Java framework for building production-ready applications"),
             new Flashcard("What does @Autowired do?", "It enables automatic dependency injection in Spring"),
             new Flashcard("What is Inversion of Control?", "A design principle where the framework controls object creation and lifecycle")
         );
-        
-        when(flashcardService.generateFlashcards(any(String.class), eq(3), eq(1L), any(String.class)))
+
+        when(flashcardService.generateFlashcards(anyString(), eq(3), eq(1L), anyString()))
             .thenReturn(mockFlashcards);
-        
-        // When & Then: Make POST request and verify response
+
         mockMvc.perform(post("/api/flashcards/generate")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -74,19 +95,18 @@ class FlashcardControllerTest {
                 .andExpect(jsonPath("$[2].question", is("What is Inversion of Control?")))
                 .andExpect(jsonPath("$[2].answer", is("A design principle where the framework controls object creation and lifecycle")));
     }
-    
+
     @Test
+    @WithMockUser(username = "testuser", roles = {"USER"})
     void testGenerateFlashcards_WithNullCount() throws Exception {
-        // Given: Mock service response with default count
         List<Flashcard> mockFlashcards = List.of(
             new Flashcard("Question 1?", "Answer 1"),
             new Flashcard("Question 2?", "Answer 2")
         );
-        
-        when(flashcardService.generateFlashcards(any(String.class), eq(null), eq(1L), any(String.class)))
+
+        when(flashcardService.generateFlashcards(anyString(), eq(null), eq(1L), anyString()))
             .thenReturn(mockFlashcards);
-        
-        // When & Then: Request without count field
+
         mockMvc.perform(post("/api/flashcards/generate")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -97,10 +117,10 @@ class FlashcardControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)));
     }
-    
+
     @Test
+    @WithMockUser(username = "testuser", roles = {"USER"})
     void testGenerateFlashcards_EmptyStudyMaterial_ReturnsBadRequest() throws Exception {
-        // When & Then: Request with empty study material
         mockMvc.perform(post("/api/flashcards/generate")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -111,10 +131,10 @@ class FlashcardControllerTest {
                     """))
                 .andExpect(status().isBadRequest());
     }
-    
+
     @Test
+    @WithMockUser(username = "testuser", roles = {"USER"})
     void testGenerateFlashcards_NullStudyMaterial_ReturnsBadRequest() throws Exception {
-        // When & Then: Request without study material field
         mockMvc.perform(post("/api/flashcards/generate")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -124,10 +144,10 @@ class FlashcardControllerTest {
                     """))
                 .andExpect(status().isBadRequest());
     }
-    
+
     @Test
+    @WithMockUser(username = "testuser", roles = {"USER"})
     void testGenerateFlashcards_WithWhitespaceOnly_ReturnsBadRequest() throws Exception {
-        // When & Then: Request with only whitespace
         mockMvc.perform(post("/api/flashcards/generate")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -138,37 +158,36 @@ class FlashcardControllerTest {
                     """))
                 .andExpect(status().isBadRequest());
     }
-    
+
     @Test
+    @WithMockUser(username = "testuser", roles = {"USER"})
     void testGenerateFlashcards_InvalidJson_ReturnsBadRequest() throws Exception {
-        // When & Then: Request with invalid JSON
         mockMvc.perform(post("/api/flashcards/generate")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{ invalid json }"))
                 .andExpect(status().isBadRequest());
     }
-    
+
     @Test
+    @WithMockUser(username = "testuser", roles = {"USER"})
     void testTestEndpoint_ReturnsSuccess() throws Exception {
-        // When & Then: Test the /test endpoint
         mockMvc.perform(get("/api/flashcards/test"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("Flashcard API is working!"));
     }
-    
+
     @Test
+    @WithMockUser(username = "testuser", roles = {"USER"})
     void testGenerateFlashcards_LongStudyMaterial() throws Exception {
-        // Given: Long study material
         String longMaterial = "Spring Boot provides auto-configuration for rapid development. ".repeat(50);
-        
+
         List<Flashcard> mockFlashcards = List.of(
             new Flashcard("What does Spring Boot provide?", "Auto-configuration for rapid development")
         );
-        
-        when(flashcardService.generateFlashcards(eq(longMaterial), eq(1), eq(1L), any(String.class)))
+
+        when(flashcardService.generateFlashcards(eq(longMaterial), eq(1), eq(1L), anyString()))
             .thenReturn(mockFlashcards);
-        
-        // When & Then: Should handle long text
+
         mockMvc.perform(post("/api/flashcards/generate")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(String.format("""
