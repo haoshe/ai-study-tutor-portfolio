@@ -57,8 +57,7 @@ class FlashcardControllerTest {
     UsernamePasswordAuthenticationToken authentication =
             new UsernamePasswordAuthenticationToken(testUser, null, List.of());
     SecurityContextHolder.getContext().setAuthentication(authentication);
-    
-    // Add this
+
     when(userRepository.findByUsername("testuser"))
             .thenReturn(Optional.of(testUser));
     when(userRepository.findById(1L))

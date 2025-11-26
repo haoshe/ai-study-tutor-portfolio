@@ -30,13 +30,12 @@ function StudyAssistant({userId}) {
   const [loadingType, setLoadingType] = useState('');
 
   // helper function to get auth headers for login
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem('token');
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    };
-  };
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token');
+  return token
+    ? { 'Authorization': `Bearer ${token}` }
+    : {};  // No header if no token
+};
 
   // Flashcard Functions
   const toggleAnswer = (index) => {

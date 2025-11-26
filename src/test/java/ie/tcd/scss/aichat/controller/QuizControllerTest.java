@@ -42,7 +42,7 @@ class QuizControllerTest {
     @MockBean
     private AuthService authService;
     
-    @MockBean  // ADD THIS
+    @MockBean  
     private UserRepository userRepository;
 
     private User testUser;
