@@ -1,18 +1,25 @@
 package ie.tcd.scss.aichat.controller;
 
 import ie.tcd.scss.aichat.dto.QuizQuestion;
+import ie.tcd.scss.aichat.model.User;
+import ie.tcd.scss.aichat.repository.UserRepository;  // ADD THIS IMPORT
 import ie.tcd.scss.aichat.service.AuthService;
 import ie.tcd.scss.aichat.service.QuizService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;  // ADD THIS IMPORT
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -21,26 +28,47 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.hamcrest.Matchers.*;
 
-/**
- * Integration test for QuizController
- * Uses MockMvc to test REST API without starting full server
- */
-@WebMvcTest(QuizController.class)
-@AutoConfigureMockMvc(addFilters = false)
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("test")  
 class QuizControllerTest {
-    
+
     @Autowired
     private MockMvc mockMvc;
-    
+
     @MockBean
     private QuizService quizService;
-    
+
     @MockBean
     private AuthService authService;
     
+    @MockBean  
+    private UserRepository userRepository;
+
+    private User testUser;
+
+    @BeforeEach
+    void setUp() {
+        // Create a test user
+        testUser = new User();
+        testUser.setId(1L);
+        testUser.setUsername("testuser");
+        testUser.setEmail("test@example.com");
+        
+        // Set up authentication with the real User entity
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(testUser, null, List.of());
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        
+        // ADD THIS: Mock the UserRepository to return the test user
+        when(userRepository.findByUsername("testuser"))
+                .thenReturn(Optional.of(testUser));
+        when(userRepository.findById(1L))
+                .thenReturn(Optional.of(testUser));
+    }
+
     @Test
     void testGenerateQuiz_Success() throws Exception {
-        // Given: Mock service response
         List<QuizQuestion> mockQuestions = Arrays.asList(
             new QuizQuestion(
                 "What is Spring Boot?",
@@ -65,11 +93,10 @@ class QuizControllerTest {
                 "The @Autowired annotation enables automatic dependency injection in Spring."
             )
         );
-        
-        when(quizService.generateQuiz(anyString(), eq(2), eq("medium"), eq(1L), any(String.class)))
+
+        when(quizService.generateQuiz(anyString(), eq(2), eq("medium"), eq(1L), anyString()))
             .thenReturn(mockQuestions);
-        
-        // When & Then: Make POST request and verify response
+
         mockMvc.perform(post("/api/quiz/generate")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -81,19 +108,17 @@ class QuizControllerTest {
                     """))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.questions", hasSize(2)))
-                .andExpect(jsonPath("$.questions[0].question", is("What is Spring Boot?")))
-                .andExpect(jsonPath("$.questions[0].options", hasSize(4)))
-                .andExpect(jsonPath("$.questions[0].correctAnswer", is(0)))
-                .andExpect(jsonPath("$.questions[0].explanation", containsString("Spring Boot")))
-                .andExpect(jsonPath("$.questions[1].question", is("What does @Autowired do?")))
-                .andExpect(jsonPath("$.questions[1].correctAnswer", is(0)))
-                .andExpect(jsonPath("$.warning").doesNotExist());
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].question", is("What is Spring Boot?")))
+                .andExpect(jsonPath("$[0].options", hasSize(4)))
+                .andExpect(jsonPath("$[0].correctAnswer", is(0)))
+                .andExpect(jsonPath("$[0].explanation", containsString("Spring Boot")))
+                .andExpect(jsonPath("$[1].question", is("What does @Autowired do?")))
+                .andExpect(jsonPath("$[1].correctAnswer", is(0)));
     }
-    
+
     @Test
     void testGenerateQuiz_WithoutCount() throws Exception {
-        // Given: Mock service response with default count
         List<QuizQuestion> mockQuestions = List.of(
             new QuizQuestion(
                 "What is dependency injection?",
@@ -102,11 +127,10 @@ class QuizControllerTest {
                 "Dependency injection is a design pattern."
             )
         );
-        
-        when(quizService.generateQuiz(anyString(), isNull(), eq("medium"), eq(1L), any(String.class)))
+
+        when(quizService.generateQuiz(anyString(), isNull(), eq("medium"), eq(1L), anyString()))
             .thenReturn(mockQuestions);
-        
-        // When & Then: Request without count field
+
         mockMvc.perform(post("/api/quiz/generate")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -116,12 +140,11 @@ class QuizControllerTest {
                     }
                     """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.questions", hasSize(1)));
+                .andExpect(jsonPath("$", hasSize(1)));
     }
-    
+
     @Test
     void testGenerateQuiz_WithoutDifficulty() throws Exception {
-        // Given: Mock service response with default difficulty
         List<QuizQuestion> mockQuestions = List.of(
             new QuizQuestion(
                 "Test question?",
@@ -130,11 +153,10 @@ class QuizControllerTest {
                 "Explanation"
             )
         );
-        
-        when(quizService.generateQuiz(anyString(), eq(1), isNull(), eq(1L), any(String.class)))
+
+        when(quizService.generateQuiz(anyString(), eq(1), isNull(), eq(1L), anyString()))
             .thenReturn(mockQuestions);
-        
-        // When & Then: Request without difficulty field
+
         mockMvc.perform(post("/api/quiz/generate")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -144,20 +166,18 @@ class QuizControllerTest {
                     }
                     """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.questions", hasSize(1)));
+                .andExpect(jsonPath("$", hasSize(1)));
     }
-    
+
     @Test
     void testGenerateQuiz_WithEasyDifficulty() throws Exception {
-        // Given: Mock service response
         List<QuizQuestion> mockQuestions = List.of(
             new QuizQuestion("Easy question?", Arrays.asList("A", "B", "C", "D"), 0, "Easy")
         );
-        
-        when(quizService.generateQuiz(anyString(), eq(1), eq("easy"), eq(1L), any(String.class)))
+
+        when(quizService.generateQuiz(anyString(), eq(1), eq("easy"), eq(1L), anyString()))
             .thenReturn(mockQuestions);
-        
-        // When & Then
+
         mockMvc.perform(post("/api/quiz/generate")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -169,18 +189,16 @@ class QuizControllerTest {
                     """))
                 .andExpect(status().isOk());
     }
-    
+
     @Test
     void testGenerateQuiz_WithHardDifficulty() throws Exception {
-        // Given: Mock service response
         List<QuizQuestion> mockQuestions = List.of(
             new QuizQuestion("Hard question?", Arrays.asList("A", "B", "C", "D"), 0, "Hard")
         );
-        
-        when(quizService.generateQuiz(anyString(), eq(1), eq("hard"), eq(1L), any(String.class)))
+
+        when(quizService.generateQuiz(anyString(), eq(1), eq("hard"), eq(1L), anyString()))
             .thenReturn(mockQuestions);
-        
-        // When & Then
+
         mockMvc.perform(post("/api/quiz/generate")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -192,10 +210,9 @@ class QuizControllerTest {
                     """))
                 .andExpect(status().isOk());
     }
-    
+
     @Test
     void testGenerateQuiz_EmptyStudyMaterial_ReturnsBadRequest() throws Exception {
-        // When & Then: Request with empty study material
         mockMvc.perform(post("/api/quiz/generate")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -206,10 +223,9 @@ class QuizControllerTest {
                     """))
                 .andExpect(status().isBadRequest());
     }
-    
+
     @Test
     void testGenerateQuiz_NullStudyMaterial_ReturnsBadRequest() throws Exception {
-        // When & Then: Request without study material field
         mockMvc.perform(post("/api/quiz/generate")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -219,10 +235,9 @@ class QuizControllerTest {
                     """))
                 .andExpect(status().isBadRequest());
     }
-    
+
     @Test
     void testGenerateQuiz_WhitespaceOnlyStudyMaterial_ReturnsBadRequest() throws Exception {
-        // When & Then: Request with only whitespace
         mockMvc.perform(post("/api/quiz/generate")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -233,10 +248,9 @@ class QuizControllerTest {
                     """))
                 .andExpect(status().isBadRequest());
     }
-    
+
     @Test
     void testGenerateQuiz_InvalidDifficulty_ReturnsBadRequest() throws Exception {
-        // When & Then: Request with invalid difficulty
         mockMvc.perform(post("/api/quiz/generate")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -248,28 +262,25 @@ class QuizControllerTest {
                     """))
                 .andExpect(status().isBadRequest());
     }
-    
+
     @Test
     void testGenerateQuiz_InvalidJson_ReturnsBadRequest() throws Exception {
-        // When & Then: Request with invalid JSON
         mockMvc.perform(post("/api/quiz/generate")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{ invalid json }"))
                 .andExpect(status().isBadRequest());
     }
-    
+
     @Test
     void testTestEndpoint_ReturnsSuccess() throws Exception {
-        // When & Then: Test the /test endpoint
         mockMvc.perform(get("/api/quiz/test"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.message", is("Quiz API is working!")));
     }
-    
+
     @Test
     void testGenerateQuiz_LargeCount() throws Exception {
-        // Given: Mock service response for large count
         List<QuizQuestion> mockQuestions = List.of(
             new QuizQuestion("Q1?", Arrays.asList("A", "B", "C", "D"), 0, "E1"),
             new QuizQuestion("Q2?", Arrays.asList("A", "B", "C", "D"), 1, "E2"),
@@ -277,11 +288,10 @@ class QuizControllerTest {
             new QuizQuestion("Q4?", Arrays.asList("A", "B", "C", "D"), 3, "E4"),
             new QuizQuestion("Q5?", Arrays.asList("A", "B", "C", "D"), 0, "E5")
         );
-        
-        when(quizService.generateQuiz(anyString(), eq(10), any(), eq(1L), any(String.class)))
+
+        when(quizService.generateQuiz(anyString(), eq(10), any(), eq(1L), anyString()))
             .thenReturn(mockQuestions);
-        
-        // When & Then: Should handle large count
+
         mockMvc.perform(post("/api/quiz/generate")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -291,6 +301,6 @@ class QuizControllerTest {
                     }
                     """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.questions", hasSize(5)));
+                .andExpect(jsonPath("$", hasSize(5)));
     }
 }

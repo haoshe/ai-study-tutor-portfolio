@@ -20,6 +20,8 @@ import java.util.regex.Pattern;
 public class QuizService {
     
     private final ChatClient chatClient;
+    private static final int MAX_TOKENS_PER_CHUNK = 20000; // Safe universal default for all GPT models
+    private static final int CHARS_PER_TOKEN = 4; // Rough estimate: 1 token ≈ 4 chars
     private final QuizSetRepository quizSetRepository;
     private final QuizQuestionRepository quizQuestionRepository;
     private final UserRepository userRepository;
@@ -31,23 +33,110 @@ public class QuizService {
         this.quizQuestionRepository = quizQuestionRepository;
         this.userRepository = userRepository;
     }
+
+    /**
+     * Split text into chunks to ensure compatibility with all OpenAI models
+     * Always chunks input for consistent behavior and quality
+     */
+    private List<String> splitIntoChunks(String text) {
+        List<String> chunks = new ArrayList<>();
+        int maxChars = MAX_TOKENS_PER_CHUNK * CHARS_PER_TOKEN;
+        
+        // If text is small enough, return as single chunk
+        if (text.length() <= maxChars) {
+            chunks.add(text);
+            return chunks;
+        }
+        
+        // Split into chunks at natural boundaries
+        int start = 0;
+        while (start < text.length()) {
+            int end = Math.min(start + maxChars, text.length());
+            
+            // Try to break at paragraph or sentence boundary
+            if (end < text.length()) {
+                int lastParagraph = text.lastIndexOf("\n\n", end);
+                int lastSentence = text.lastIndexOf(". ", end);
+                
+                if (lastParagraph > start + (maxChars / 2)) {
+                    end = lastParagraph + 2;
+                } else if (lastSentence > start + (maxChars / 2)) {
+                    end = lastSentence + 2;
+                }
+            }
+            
+            chunks.add(text.substring(start, end));
+            start = end;
+        }
+        
+        return chunks;
+    }
     
-    public List<QuizQuestion> generateQuiz(String studyMaterial, Integer count, String difficulty, Long userId, String title) {
+    /**
+     * This merged version:
+     *  ✔ Uses chunking for large documents (HEAD)
+     *  ✔ Saves quiz + questions to database (database branch)
+     *  ✔ Supports difficulty + userId + title
+     */
+    public List<QuizQuestion> generateQuiz(
+            String studyMaterial,
+            Integer count,
+            String difficulty,
+            Long userId,
+            String title
+    ) {
+
         int numberOfQuestions = (count != null && count > 0) ? count : 5;
         String difficultyLevel = (difficulty != null) ? difficulty : "medium";
-        
-        String prompt = buildQuizPrompt(studyMaterial, numberOfQuestions, difficultyLevel);
-        
-        String aiResponse = chatClient.prompt()
-                .user(prompt)
-                .call()
-                .content();
-        
-        List<QuizQuestion> questions = parseQuizQuestions(aiResponse);
-        saveQuizToDatabase(questions, studyMaterial, difficultyLevel, userId, title);
-        
-        return questions;
+
+        // Split text into manageable chunks (HEAD feature)
+        List<String> chunks = splitIntoChunks(studyMaterial);
+        List<QuizQuestion> allQuestions = new ArrayList<>();
+
+        // Equally distribute question generation across chunks
+        int questionsPerChunk = (int) Math.ceil((double) numberOfQuestions / chunks.size());
+
+        System.out.println("Processing " + chunks.size() + " chunk(s) for " + numberOfQuestions + " questions.");
+
+        for (int i = 0; i < chunks.size(); i++) {
+            String chunk = chunks.get(i);
+
+            // Last chunk receives remaining questions
+            int toGenerate = (i == chunks.size() - 1)
+                    ? (numberOfQuestions - allQuestions.size())
+                    : questionsPerChunk;
+
+            if (toGenerate <= 0) break;
+
+            try {
+                System.out.println("Generating " + toGenerate + " questions from chunk " + (i + 1));
+                String prompt = buildQuizPrompt(chunk, toGenerate, difficultyLevel);
+
+                String aiResponse = chatClient.prompt()
+                        .user(prompt)
+                        .call()
+                        .content();
+
+                List<QuizQuestion> chunkQuestions = parseQuizQuestions(aiResponse);
+                allQuestions.addAll(chunkQuestions);
+
+                if (allQuestions.size() >= numberOfQuestions) break;
+
+            } catch (Exception e) {
+                System.err.println("Error generating quiz for chunk " + (i + 1) + ": " + e.getMessage());
+            }
+        }
+
+        // Trim to the requested number
+        List<QuizQuestion> finalQuestions =
+                allQuestions.subList(0, Math.min(numberOfQuestions, allQuestions.size()));
+
+        // Save the full quiz to the database
+        saveQuizToDatabase(finalQuestions, studyMaterial, difficultyLevel, userId, title);
+
+        return finalQuestions;
     }
+
     
     private void saveQuizToDatabase(List<QuizQuestion> questionDTOs, String studyMaterial, String difficulty, Long userId, String title) {
         // Get user
@@ -88,41 +177,28 @@ public class QuizService {
     private String buildQuizPrompt(String studyMaterial, int count, String difficulty) {
         String difficultyInstructions = getDifficultyInstructions(difficulty);
         
-return String.format("""
-            Generate UP TO %d multiple-choice quiz questions from the following study material.
-            
-            Study Material:
-            %s
-            
-            Requirements:
-            - **CRITICAL: Only create questions using information EXPLICITLY in the study material above**
-            - **DO NOT use outside knowledge, general computer science concepts, or theoretical applications**
-            - **DO NOT create questions about what COULD be done with the material - only about what IS in the material**
-            - **CRITICAL: DO NOT generate repetitive or duplicate questions**
-            - **CRITICAL: If you can only generate fewer than %d UNIQUE questions from the material, generate only as many as you can without repetition**
-            - **Quality over quantity - it's better to generate 3 unique questions than 10 repetitive ones**
-            - **Each question must have UNIQUE question text - no duplicate phrasing**
-            - Each question should have exactly 4 options (A, B, C, D)
-            - Only ONE option is correct
-            - **CRITICAL: Distribute correct answers evenly across all options (A, B, C, D)**
-            - **Each question should have the correct answer in a DIFFERENT position**
-            - Wrong answers (distractors) must be plausible but clearly incorrect
-            - Distractors should be related to the topic (not obviously wrong)
-            - %s
-            - Include a brief explanation for why the correct answer is right
-            - If the material lacks educational content or is repetitive gibberish, return nothing
-            
-            Format each question EXACTLY like this:
-            Q: [Your question here]
-            A: [Option A]
-            B: [Option B]
-            C: [Option C]
-            D: [Option D]
-            CORRECT: [A/B/C/D]
-            EXPLAIN: [Explanation of correct answer]
-            
-            Generate UP TO %d unique, non-repetitive questions now:
-            """, count, studyMaterial, count, difficultyInstructions, count);
+        return String.format("""
+                Generate %d multiple-choice quiz questions from the following study material.
+                
+                Study Material:
+                %s
+                
+                Requirements:
+                - Each question should have exactly 4 options (A, B, C, D)
+                - Only ONE option is correct
+                - %s
+                
+                Format each question EXACTLY like this:
+                Q: [Your question here]
+                A: [Option A]
+                B: [Option B]
+                C: [Option C]
+                D: [Option D]
+                CORRECT: [A/B/C/D]
+                EXPLAIN: [Explanation]
+                
+                Generate %d questions now:
+                """, count, studyMaterial, difficultyInstructions, count);
     }
     
     private String getDifficultyInstructions(String difficulty) {

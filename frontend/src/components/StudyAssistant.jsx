@@ -3,22 +3,41 @@ import './StudyAssistant.css';
 
 const API_BASE_URL = ''; // Empty because we're using proxy
 
-function StudyAssistant() {
+function StudyAssistant({userId}) {
+  // Study Material States
   const [studyMaterial, setStudyMaterial] = useState('');
+  const [uploadedContent, setUploadedContent] = useState('');
+  const [uploadedFileName, setUploadedFileName] = useState('');
+  const [inputSource, setInputSource] = useState('text'); // 'file' or 'text'
+
+  // Flashcard States
   const [flashcards, setFlashcards] = useState([]);
+  const [visibleAnswers, setVisibleAnswers] = useState({});
+  const [flashcardCount, setFlashcardCount] = useState(5);
+  const [flashcardWarning, setFlashcardWarning] = useState('');
+
+  // Quiz States
   const [quizzes, setQuizzes] = useState([]);
+  const [userAnswers, setUserAnswers] = useState({});
+  const [quizCount, setQuizCount] = useState(5);
+  const [difficulty, setDifficulty] = useState('MEDIUM');
+  const [quizWarning, setQuizWarning] = useState('');
+
+  // UI States
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('flashcards');
-  const [visibleAnswers, setVisibleAnswers] = useState({});
-  const [userAnswers, setUserAnswers] = useState({});
   const [loadingType, setLoadingType] = useState('');
-  const [flashcardCount, setFlashcardCount] = useState(5);
-  const [quizCount, setQuizCount] = useState(5);
-  const [difficulty, setDifficulty] = useState('MEDIUM');
-  const [flashcardWarning, setFlashcardWarning] = useState('');
-  const [quizWarning, setQuizWarning] = useState('');
 
+  // helper function to get auth headers for login
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token');
+  return token
+    ? { 'Authorization': `Bearer ${token}` }
+    : {};  // No header if no token
+};
+
+  // Flashcard Functions
   const toggleAnswer = (index) => {
     setVisibleAnswers(prev => ({
       ...prev,
@@ -26,6 +45,14 @@ function StudyAssistant() {
     }));
   };
 
+  const resetFlashcards = () => {
+    setFlashcards([]);
+    setVisibleAnswers({});
+    setFlashcardWarning('');
+    setError('');
+  };
+
+  // Quiz Functions
   const calculateScore = () => {
     let correct = 0;
     quizzes.forEach((question, index) => {
@@ -36,11 +63,11 @@ function StudyAssistant() {
     return correct;
   };
 
-  const resetFlashcards = () => {
-    setFlashcards([]);
-    setVisibleAnswers({});
-    setFlashcardWarning('');
-    setError('');
+  const handleAnswerSelect = (questionIndex, selectedOption) => {
+    setUserAnswers(prev => ({
+      ...prev,
+      [questionIndex]: selectedOption
+    }));
   };
 
   const resetQuiz = () => {
@@ -50,10 +77,95 @@ function StudyAssistant() {
     setError('');
   };
 
+  // File Upload Handler with size validation
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit
+    if (file.size > MAX_FILE_SIZE) {
+      setError('File size exceeds 10MB limit. Please upload a smaller file.');
+      setUploadedFileName('');
+      setUploadedContent('');
+      return;
+    }
+
+    const validTypes = ['application/pdf', 'application/vnd.ms-powerpoint', 
+                        'application/vnd.openxmlformats-officedocument.presentationml.presentation'];
+    if (!validTypes.includes(file.type)) {
+      setError('Please upload a PDF or PowerPoint file');
+      setUploadedFileName('');
+      setUploadedContent('');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setUploadedFileName(file.name);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(`${API_BASE_URL}/api/slides/upload`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to upload document (${response.status}). The file format may not be supported.`);
+      }
+
+      const data = await response.json();
+      
+      // Extract text from all sections and store in background
+      const extractedText = data.sections
+        .map(section => section.content)
+        .join('\n\n');
+      
+      if (!extractedText.trim()) {
+        throw new Error('Document appears to be empty or unreadable');
+      }
+
+      setUploadedContent(extractedText);
+      setInputSource('file'); // Auto-switch to file input on successful upload
+      setError('');
+    } catch (err) {
+      console.error('File upload error:', err);
+      setError(`Upload failed: ${err.message}`);
+      setUploadedFileName('');
+      setUploadedContent('');
+      setInputSource('text'); // Revert to text input on failure
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle text input change - auto-switch to text source
+  const handleTextChange = (e) => {
+    setStudyMaterial(e.target.value);
+    if (e.target.value.trim() && inputSource === 'file' && error) {
+      // If switching from file with error to text, offer to clear error
+      setError('');
+    }
+  };
+
   // Generate Flashcards
   const generateFlashcards = async () => {
-    if (!studyMaterial.trim()) {
-      setError('Please enter some study material');
+    // Get content based on selected source
+    let contentToUse = '';
+    let sourceLabel = '';
+
+    if (inputSource === 'file') {
+      contentToUse = uploadedContent;
+      sourceLabel = uploadedFileName;
+    } else {
+      contentToUse = studyMaterial;
+      sourceLabel = 'Text input';
+    }
+    
+    if (!contentToUse.trim()) {
+      setError(`Please provide study material via ${inputSource === 'file' ? 'file upload' : 'text input'}`);
       return;
     }
 
@@ -67,23 +179,44 @@ function StudyAssistant() {
       const response = await fetch(`${API_BASE_URL}/api/flashcards/generate`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json', 
+           ...getAuthHeaders(),
         },
         body: JSON.stringify({
-          studyMaterial: studyMaterial,
-          count: flashcardCount
+          studyMaterial: contentToUse,
+          count: flashcardCount,
+          userId: userId, 
+          title: 'AI Generated Flashcards' 
         })
       });
 
+      if (response.status === 401) {
+        // Token expired or invalid
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.reload(); // Redirect to login
+        return;
+      }
+
       if (!response.ok) {
-        throw new Error('Flashcards failed to generate');
+        throw new Error(`Flashcards failed to generate (${response.status}). The source material may be too short or unsupported.`);
       }
 
       const data = await response.json();
-      setFlashcards(data.flashcards || []);
-      setFlashcardWarning(data.warning || '');
+      
+      // Handle both response formats
+      const flashcardsData = data.flashcards || data.data || data;
+      
+      if (Array.isArray(flashcardsData)) {
+        setFlashcards(flashcardsData);
+        setFlashcardWarning(data.warning || '');
+      } else {
+        throw new Error('Invalid flashcard data format');
+      }
+      
       setError('');
     } catch (err) {
+      console.error('Flashcard generation error:', err);
       setError(err.message);
       setFlashcards([]);
       setFlashcardWarning('');
@@ -93,17 +226,22 @@ function StudyAssistant() {
     }
   };
 
-  const handleAnswerSelect = (questionIndex, selectedOption) => {
-    setUserAnswers(prev => ({
-      ...prev,
-      [questionIndex]: selectedOption
-    }));
-  };
-
   // Generate Quiz
   const generateQuiz = async () => {
-    if (!studyMaterial.trim()) {
-      setError('Please enter some study material');
+    // Get content based on selected source
+    let contentToUse = '';
+    let sourceLabel = '';
+
+    if (inputSource === 'file') {
+      contentToUse = uploadedContent;
+      sourceLabel = uploadedFileName;
+    } else {
+      contentToUse = studyMaterial;
+      sourceLabel = 'Text input';
+    }
+    
+    if (!contentToUse.trim()) {
+      setError(`Please provide study material via ${inputSource === 'file' ? 'file upload' : 'text input'}`);
       return;
     }
 
@@ -118,23 +256,44 @@ function StudyAssistant() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+           ...getAuthHeaders(),
         },
         body: JSON.stringify({
-          studyMaterial: studyMaterial,
+          studyMaterial: contentToUse,
           count: quizCount, 
-          difficulty: difficulty
+          difficulty: difficulty,
+          userId: userId,
+          title: 'AI Generated Quiz'
         })
       });
 
+       if (response.status === 401) {
+        // Token expired or invalid
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.reload(); // Redirect to login
+        return;
+      }
+
       if (!response.ok) {
-        throw new Error('Quiz failed to generate');
+        throw new Error(`Quiz failed to generate (${response.status}). The source material may be too short or unsupported.`);
       }
 
       const data = await response.json();
-      setQuizzes(data.questions || []);
-      setQuizWarning(data.warning || '');
+      
+      // Handle both response formats
+      const quizData = data.questions || data.data || data;
+      
+      if (Array.isArray(quizData)) {
+        setQuizzes(quizData);
+        setQuizWarning(data.warning || '');
+      } else {
+        throw new Error('Invalid quiz data format');
+      }
+      
       setError('');
     } catch (err) {
+      console.error('Quiz generation error:', err);
       setError(err.message);
       setQuizzes([]);
       setQuizWarning('');
@@ -144,18 +303,87 @@ function StudyAssistant() {
     }
   };
 
+  // Clear file upload
+  const clearFileUpload = () => {
+    setUploadedContent('');
+    setUploadedFileName('');
+    setInputSource('text');
+    setError('');
+    // Reset file input
+    const fileInput = document.getElementById('file-upload');
+    if (fileInput) fileInput.value = '';
+  };
+
   return (
     <div className="study-assistant">
       <h1>AI Study Assistant</h1>
       
       {/* Input Section */}
       <div className="input-section">
-        <textarea
-          placeholder="Enter your study material here..."
-          value={studyMaterial}
-          onChange={(e) => setStudyMaterial(e.target.value)}
-          rows={8}
-        />
+        {/* Input Source Selector */}
+        <div className="input-source-selector">
+          <label>Select Study Material Source:</label>
+          <div className="source-options">
+            <label className="radio-label">
+              <input
+                type="radio"
+                value="text"
+                checked={inputSource === 'text'}
+                onChange={(e) => {
+                  setInputSource(e.target.value);
+                  setError('');
+                }}
+              />
+              Text Input
+            </label>
+              <label className="radio-label">
+              <input
+                type="radio"
+                value="file"
+                checked={inputSource === 'file'}
+                onChange={(e) => setInputSource(e.target.value)}
+              />
+              File Upload {uploadedFileName && `(${uploadedFileName})`}
+            </label>
+          </div>
+        </div>
+
+        {/* File Upload Section */}
+        {inputSource === 'file' ? (
+          <div className="upload-section">
+            <label htmlFor="file-upload" className="upload-button">
+              📄 Upload PDF/PowerPoint
+            </label>
+            <input
+              id="file-upload"
+              type="file"
+              accept=".pdf,.ppt,.pptx"
+              onChange={handleFileUpload}
+              style={{ display: 'none' }}
+              disabled={loading}
+            />
+            {uploadedFileName && (
+              <div className="file-info">
+                <span className="uploaded-file-name">✓ {uploadedFileName}</span>
+                <button 
+                  className="clear-file-btn"
+                  onClick={clearFileUpload}
+                  disabled={loading}
+                >
+                  Clear
+                </button>
+              </div>
+            )}
+            <p className="source-note">File size limit: 10MB. Supported: PDF, PPT, PPTX</p>
+          </div>
+        ) : (
+          <textarea
+            placeholder="Enter your study material here..."
+            value={studyMaterial}
+            onChange={handleTextChange}
+            rows={8}
+          />
+        )}
         
         {/* Settings */}
         <div className="settings-section">
@@ -165,9 +393,9 @@ function StudyAssistant() {
               id="flashcard-count"
               type="number"
               min="1"
-              max="20"
+              max="10"
               value={flashcardCount}
-              onChange={(e) => setFlashcardCount(Math.min(20, Math.max(1, parseInt(e.target.value) || 1)))}
+              onChange={(e) => setFlashcardCount(Math.min(10, Math.max(1, parseInt(e.target.value) || 1)))}
             />
           </div>
           
@@ -177,9 +405,9 @@ function StudyAssistant() {
               id="quiz-count"
               type="number"
               min="1"
-              max="20"
+              max="10"
               value={quizCount}
-              onChange={(e) => setQuizCount(Math.min(20, Math.max(1, parseInt(e.target.value) || 1)))}
+              onChange={(e) => setQuizCount(Math.min(10, Math.max(1, parseInt(e.target.value) || 1)))}
             />
           </div>
           
@@ -273,7 +501,7 @@ function StudyAssistant() {
                     onClick={() => toggleAnswer(index)}
                     className="toggle-answer-btn"
                   >
-                    {visibleAnswers[index] ? 'Hide Answer' : 'Answer'}
+                    {visibleAnswers[index] ? 'Hide Answer' : 'Show Answer'}
                   </button>
                   {visibleAnswers[index] && (
                     <div className="answer">
@@ -310,13 +538,13 @@ function StudyAssistant() {
                     <div 
                       className="score-fill"
                       style={{ 
-                        width: `${(calculateScore() / quizzes.length) * 100}%`,
-                        backgroundColor: (calculateScore() / quizzes.length) >= 0.7 ? '#4CAF50' : (calculateScore() / quizzes.length) >= 0.5 ? '#FF9800' : '#f44336'
+                        width: `${quizzes.length > 0 ? (calculateScore() / quizzes.length) * 100 : 0}%`,
+                        backgroundColor: quizzes.length > 0 && (calculateScore() / quizzes.length) >= 0.7 ? '#4CAF50' : quizzes.length > 0 && (calculateScore() / quizzes.length) >= 0.5 ? '#FF9800' : '#f44336'
                       }}
                     ></div>
                   </div>
                   <p className="score-percentage">
-                    {Math.round((calculateScore() / quizzes.length) * 100)}%
+                    {quizzes.length > 0 ? Math.round((calculateScore() / quizzes.length) * 100) : 0}%
                   </p>
                 </div>
 
@@ -325,7 +553,7 @@ function StudyAssistant() {
                     <h3>Question {index + 1}</h3>
                     <p className="question-text">{question.question}</p>
                     <div className="options">
-                      {question.options.map((option, optIndex) => {
+                      {question.options && question.options.map((option, optIndex) => {
                         const isSelected = userAnswers[index] === option;
                         const isCorrect = optIndex === question.correctAnswer;
                         const showFeedback = userAnswers[index] !== undefined;

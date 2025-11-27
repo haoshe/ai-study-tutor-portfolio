@@ -1,30 +1,39 @@
 package ie.tcd.scss.aichat.config;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import ie.tcd.scss.aichat.filter.JwtAuthenticationFilter;
 
 /**
  * Security configuration for the AI Chat application.
- * Configures which endpoints require authentication and which are publicly accessible.
+ * Configures JWT-based stateless authentication and authorization rules.
  */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
     
+    @Autowired
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
+    
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+            .csrf(csrf -> csrf.disable())  // Disable CSRF for stateless JWT API
+            .sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))  // No sessions - use JWT tokens
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll()       // Allow public access to authentication endpoints
-                .requestMatchers("/api/quiz/**").permitAll()        // Temporary: Allow public access to quiz API (will secure in Job 3)
-                .requestMatchers("/api/flashcards/**").permitAll()  // Temporary: Allow public access to flashcard API (will secure in Job 3)
-                .requestMatchers("/api/quizzes/**").permitAll()     // Temporary: Allow public access to quiz storage API (will secure in Job 3)
-                .anyRequest().authenticated()                        // All other endpoints require authentication
+                .requestMatchers("/api/auth/**").permitAll()        // Allow public access to login/register
+                .requestMatchers("/api/slides/**").permitAll()      // Allow document upload (will secure in Job 3)
+                .anyRequest().authenticated()                        // All other endpoints require valid JWT
             )
-            .csrf(csrf -> csrf.disable());  // Disable CSRF for API (required for REST API with JWT)
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);  // Add JWT validation before auth
         
         return http.build();
     }

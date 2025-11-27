@@ -1,8 +1,9 @@
 package ie.tcd.scss.aichat.util;
 
-import io.jsonwebtoken.ExpiredJwtException;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Date;
 
@@ -19,6 +20,9 @@ class JwtUtilTest {
     @BeforeEach
     void setUp() {
         jwtUtil = new JwtUtil();
+        // Inject the secret key 
+        ReflectionTestUtils.setField(jwtUtil, "secretKey", 
+            "testSecretKeyForJwtTokenGenerationInTestsAtLeast256BitsLong12345678901234567890"); 
     }
 
     @Test

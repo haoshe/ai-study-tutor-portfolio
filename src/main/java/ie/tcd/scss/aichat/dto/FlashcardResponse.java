@@ -1,29 +1,18 @@
 package ie.tcd.scss.aichat.dto;
 
-import java.util.List;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+/**
+ * DTO for returning individual flashcard data
+ */
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class FlashcardResponse {
-    private List<Flashcard> flashcards;
-    private String warning;
-    
-    public FlashcardResponse(List<Flashcard> flashcards, String warning) {
-        this.flashcards = flashcards;
-        this.warning = warning;
-    }
-    
-    public List<Flashcard> getFlashcards() {
-        return flashcards;
-    }
-    
-    public void setFlashcards(List<Flashcard> flashcards) {
-        this.flashcards = flashcards;
-    }
-    
-    public String getWarning() {
-        return warning;
-    }
-    
-    public void setWarning(String warning) {
-        this.warning = warning;
-    }
+    private Long id;
+    private String question;
+    private String answer;
+    private Integer position;
 }
