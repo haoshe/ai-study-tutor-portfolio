@@ -6,15 +6,17 @@ function Auth({ onLoginSuccess }) {
   const [formData, setFormData] = useState({
     username: '',
     email: '',
-    password: ''
+    password: '',
+    rememberMe: false
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
+    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: value
     });
     setError('');
   };
@@ -45,8 +47,8 @@ function Auth({ onLoginSuccess }) {
     try {
       const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
       const payload = isLogin 
-        ? { username: formData.username, password: formData.password }
-        : formData;
+        ? { username: formData.username, password: formData.password, rememberMe: formData.rememberMe }
+        : { username: formData.username, email: formData.email, password: formData.password };
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -81,7 +83,7 @@ function Auth({ onLoginSuccess }) {
   const toggleMode = () => {
     setIsLogin(!isLogin);
     setError('');
-    setFormData({ username: '', email: '', password: '' });
+    setFormData({ username: '', email: '', password: '', rememberMe: false });
   };
 
   return (
@@ -139,6 +141,21 @@ function Auth({ onLoginSuccess }) {
               <small className="form-hint">Minimum 6 characters</small>
             )}
           </div>
+
+          {isLogin && (
+            <div className="form-group checkbox-group">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  name="rememberMe"
+                  checked={formData.rememberMe}
+                  onChange={handleChange}
+                  disabled={loading}
+                />
+                <span>Remember me</span>
+              </label>
+            </div>
+          )}
 
           {error && (
             <div className="auth-error">
