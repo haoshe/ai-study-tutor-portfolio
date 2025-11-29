@@ -1,13 +1,14 @@
 package ie.tcd.scss.aichat.service;
 
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Service;
+
 import ie.tcd.scss.aichat.dto.AuthResponse;
 import ie.tcd.scss.aichat.dto.LoginRequest;
 import ie.tcd.scss.aichat.dto.RegisterRequest;
 import ie.tcd.scss.aichat.model.User;
 import ie.tcd.scss.aichat.repository.UserRepository;
 import ie.tcd.scss.aichat.util.JwtUtil;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.stereotype.Service;
 
 @Service
 public class AuthService {
@@ -64,8 +65,8 @@ public class AuthService {
             throw new IllegalArgumentException("Invalid credentials");
         }
 
-        // Generate token
-        String token = jwtUtil.generateToken(user.getUsername());
+        // Generate token with appropriate expiration based on rememberMe flag
+        String token = jwtUtil.generateToken(user.getUsername(), request.isRememberMe());
 
         // Return response
         return new AuthResponse(

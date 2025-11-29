@@ -1,17 +1,18 @@
 package ie.tcd.scss.aichat.util;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.security.Keys;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 
 @Component
 public class JwtUtil {
@@ -20,6 +21,7 @@ public class JwtUtil {
     private String secretKey;
     
     private static final long JWT_TOKEN_VALIDITY = 24 * 60 * 60 * 1000; // 24 hours
+    private static final long JWT_REMEMBER_ME_VALIDITY = 30L * 24 * 60 * 60 * 1000; // 30 days
 
     private Key getSigningKey() {
         return Keys.hmacShaKeyFor(secretKey.getBytes());
@@ -51,16 +53,21 @@ public class JwtUtil {
     }
 
     public String generateToken(String username) {
-        Map<String, Object> claims = new HashMap<>();
-        return createToken(claims, username);
+        return generateToken(username, false);
     }
 
-    private String createToken(Map<String, Object> claims, String subject) {
+    public String generateToken(String username, boolean rememberMe) {
+        Map<String, Object> claims = new HashMap<>();
+        long validity = rememberMe ? JWT_REMEMBER_ME_VALIDITY : JWT_TOKEN_VALIDITY;
+        return createToken(claims, username, validity);
+    }
+
+    private String createToken(Map<String, Object> claims, String subject, long validity) {
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(subject)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + JWT_TOKEN_VALIDITY))
+                .setExpiration(new Date(System.currentTimeMillis() + validity))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
