@@ -18,7 +18,10 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
@@ -151,7 +154,7 @@ class AuthServiceTest {
         String rawPassword = "password123";
         String hashedPassword = passwordEncoder.encode(rawPassword);
         
-        LoginRequest request = new LoginRequest("testuser", rawPassword);
+        LoginRequest request = new LoginRequest("testuser", rawPassword,false);
         
         User user = new User();
         user.setId(1L);
@@ -160,7 +163,7 @@ class AuthServiceTest {
         user.setPasswordHash(hashedPassword);
         
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
-        when(jwtUtil.generateToken("testuser")).thenReturn("mock-jwt-token");
+        when(jwtUtil.generateToken("testuser",false)).thenReturn("mock-jwt-token");
 
         // When
         AuthResponse response = authService.login(request);
@@ -173,13 +176,13 @@ class AuthServiceTest {
         assertEquals("mock-jwt-token", response.getToken());
         
         verify(userRepository, times(1)).findByUsername("testuser");
-        verify(jwtUtil, times(1)).generateToken("testuser");
+        verify(jwtUtil, times(1)).generateToken(eq("testuser"), anyBoolean());
     }
 
     @Test
     void testLogin_UserNotFound_ThrowsException() {
         // Given
-        LoginRequest request = new LoginRequest("nonexistent", "password123");
+        LoginRequest request = new LoginRequest("nonexistent", "password123",false);
         when(userRepository.findByUsername("nonexistent")).thenReturn(Optional.empty());
 
         // When & Then
@@ -199,7 +202,7 @@ class AuthServiceTest {
         String correctPassword = "correctPassword";
         String hashedPassword = passwordEncoder.encode(correctPassword);
         
-        LoginRequest request = new LoginRequest("testuser", "wrongPassword");
+        LoginRequest request = new LoginRequest("testuser", "wrongPassword", false);
         
         User user = new User();
         user.setId(1L);
@@ -298,5 +301,205 @@ class AuthServiceTest {
 
         // Then
         assertFalse(isValid);
+    }
+ @Test
+    void testLogin_WithRememberMeTrue_ShouldGenerateTokenWithExtendedExpiration() {
+        // Given
+        String rawPassword = "password123";
+        String hashedPassword = passwordEncoder.encode(rawPassword);
+        
+        // CHANGED: rememberMe set to true
+        LoginRequest request = new LoginRequest("testuser", rawPassword, true);
+        
+        User user = new User();
+        user.setId(1L);
+        user.setUsername("testuser");
+        user.setEmail("test@example.com");
+        user.setPasswordHash(hashedPassword);
+        
+        String expectedToken = "jwt-token-with-30day-expiration";
+        
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
+        // CHANGED: Mock generateToken with rememberMe=true
+        when(jwtUtil.generateToken("testuser", true)).thenReturn(expectedToken);
+
+        // When
+        AuthResponse response = authService.login(request);
+
+        // Then
+        assertNotNull(response, "Response should not be null");
+        assertEquals(expectedToken, response.getToken(), 
+            "Token should be the one generated with rememberMe=true (30-day expiration)");
+        // CHANGED: Verify generateToken called with true
+        verify(jwtUtil).generateToken("testuser", true);
+        verify(jwtUtil, never()).generateToken("testuser", false);
+        
+        System.out.println("✓ PASS: RememberMe=true generated token with extended expiration (30 days)");
+    }
+
+    @Test
+    void testLogin_WithRememberMeFalse_ShouldGenerateTokenWithStandardExpiration() {
+        // Given
+        String rawPassword = "password123";
+        String hashedPassword = passwordEncoder.encode(rawPassword);
+        
+        // CHANGED: rememberMe explicitly set to false
+        LoginRequest request = new LoginRequest("testuser", rawPassword, false);
+        
+        User user = new User();
+        user.setId(1L);
+        user.setUsername("testuser");
+        user.setEmail("test@example.com");
+        user.setPasswordHash(hashedPassword);
+        
+        String expectedToken = "jwt-token-with-24hour-expiration";
+        
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
+        // CHANGED: Mock generateToken with rememberMe=false
+        when(jwtUtil.generateToken("testuser", false)).thenReturn(expectedToken);
+
+        // When
+        AuthResponse response = authService.login(request);
+
+        // Then
+        assertNotNull(response, "Response should not be null");
+        assertEquals(expectedToken, response.getToken(), 
+            "Token should be the one generated with rememberMe=false (24-hour expiration)");
+        // CHANGED: Verify generateToken called with false
+        verify(jwtUtil).generateToken("testuser", false);
+        verify(jwtUtil, never()).generateToken("testuser", true);
+        
+        System.out.println("✓ PASS: RememberMe=false generated token with standard expiration (24 hours)");
+    }
+
+    @Test
+    void testLogin_ExpectedTrueButReceivedFalse_ShouldGenerateWrongTokenType() {
+        // Given - User expects remember me but it's set to false
+        String rawPassword = "password123";
+        String hashedPassword = passwordEncoder.encode(rawPassword);
+        
+        // CHANGED: rememberMe set to false (but user might have expected true)
+        LoginRequest request = new LoginRequest("testuser", rawPassword, false);
+        
+        User user = new User();
+        user.setId(1L);
+        user.setUsername("testuser");
+        user.setEmail("test@example.com");
+        user.setPasswordHash(hashedPassword);
+        
+        String shortLivedToken = "jwt-token-with-24hour-expiration";
+        
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
+        when(jwtUtil.generateToken("testuser", false)).thenReturn(shortLivedToken);
+
+        // When
+        AuthResponse response = authService.login(request);
+
+        // Then
+        assertNotNull(response, "Response should not be null");
+        assertEquals(shortLivedToken, response.getToken(), 
+            "Token should be short-lived (24 hours)");
+        verify(jwtUtil).generateToken("testuser", false);
+        verify(jwtUtil, never()).generateToken("testuser", true);
+        
+        // This simulates a scenario where user expected long-lived token but got short-lived
+        System.out.println("✗ FAIL SCENARIO: Expected rememberMe=true (30-day token) but received rememberMe=false (24-hour token)");
+        System.out.println("   Impact: User will be logged out after 24 hours instead of 30 days");
+    }
+
+    @Test
+    void testLogin_ExpectedFalseButReceivedTrue_ShouldGenerateWrongTokenType() {
+        // Given - User expects standard session but rememberMe is true
+        String rawPassword = "password123";
+        String hashedPassword = passwordEncoder.encode(rawPassword);
+        
+        // CHANGED: rememberMe set to true (but user might have expected false)
+        LoginRequest request = new LoginRequest("testuser", rawPassword, true);
+        
+        User user = new User();
+        user.setId(1L);
+        user.setUsername("testuser");
+        user.setEmail("test@example.com");
+        user.setPasswordHash(hashedPassword);
+        
+        String longLivedToken = "jwt-token-with-30day-expiration";
+        
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
+        when(jwtUtil.generateToken("testuser", true)).thenReturn(longLivedToken);
+
+        // When
+        AuthResponse response = authService.login(request);
+
+        // Then
+        assertNotNull(response, "Response should not be null");
+        assertEquals(longLivedToken, response.getToken(), 
+            "Token should be long-lived (30 days)");
+        verify(jwtUtil).generateToken("testuser", true);
+        verify(jwtUtil, never()).generateToken("testuser", false);
+        
+        // This simulates a scenario where user expected short-lived token but got long-lived
+        System.out.println("✗ FAIL SCENARIO: Expected rememberMe=false (24-hour token) but received rememberMe=true (30-day token)");
+        System.out.println("   Impact: Security concern - token remains valid for 30 days instead of 24 hours");
+    }
+
+    @Test
+    void testRememberMeFlag_PreservedThroughAuthFlow() {
+        // Test that rememberMe flag is correctly passed from request to token generation
+        // Given
+        String rawPassword = "password123";
+        String hashedPassword = passwordEncoder.encode(rawPassword);
+        
+        // CHANGED: Creating two different requests with different rememberMe values
+        LoginRequest rememberMeRequest = new LoginRequest("testuser", rawPassword, true);
+        LoginRequest standardRequest = new LoginRequest("testuser", rawPassword, false);
+        
+        User user = new User();
+        user.setId(1L);
+        user.setUsername("testuser");
+        user.setEmail("test@example.com");
+        user.setPasswordHash(hashedPassword);
+        
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
+        when(jwtUtil.generateToken(anyString(), anyBoolean())).thenReturn("token");
+
+        // When
+        authService.login(rememberMeRequest);
+        authService.login(standardRequest);
+
+        // Then
+        // CHANGED: Verify both true and false were called
+        verify(jwtUtil).generateToken("testuser", true);
+        verify(jwtUtil).generateToken("testuser", false);
+        
+        System.out.println("✓ PASS: RememberMe flag correctly preserved through authentication flow");
+    }
+
+    @Test
+    void testLogin_VerifyRememberMeParameterPassedCorrectly() {
+        // This test specifically verifies the rememberMe parameter flows correctly
+        // Given
+        String rawPassword = "password123";
+        String hashedPassword = passwordEncoder.encode(rawPassword);
+        
+        // CHANGED: Test with rememberMe=true
+        LoginRequest request = new LoginRequest("testuser", rawPassword, true);
+        
+        User user = new User();
+        user.setId(1L);
+        user.setUsername("testuser");
+        user.setEmail("test@example.com");
+        user.setPasswordHash(hashedPassword);
+        
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
+        when(jwtUtil.generateToken("testuser", true)).thenReturn("long-lived-token");
+
+        // When
+        authService.login(request);
+
+        // Then
+        // CHANGED: Verify the exact parameter is passed
+        verify(jwtUtil).generateToken(eq("testuser"), eq(true));
+        
+        System.out.println("✓ PASS: Verified generateToken called with correct rememberMe parameter");
     }
 }

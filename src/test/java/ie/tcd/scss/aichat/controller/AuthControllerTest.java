@@ -121,7 +121,7 @@ class AuthControllerTest {
     @Test
     void testLogin_Success() {
         // Given
-        LoginRequest request = new LoginRequest("testuser", "password123");
+        LoginRequest request = new LoginRequest("testuser", "password123",false);
         AuthResponse expectedResponse = new AuthResponse(1L, "testuser", "test@example.com", "mock-jwt-token");
         
         when(authService.login(any(LoginRequest.class))).thenReturn(expectedResponse);
@@ -145,7 +145,7 @@ class AuthControllerTest {
     @Test
     void testLogin_InvalidCredentials_Returns401() {
         // Given
-        LoginRequest request = new LoginRequest("testuser", "wrongpassword");
+        LoginRequest request = new LoginRequest("testuser", "wrongpassword",false);
         when(authService.login(any(LoginRequest.class)))
             .thenThrow(new IllegalArgumentException("Invalid credentials"));
 
@@ -167,7 +167,7 @@ class AuthControllerTest {
     @Test
     void testLogin_UserNotFound_Returns401() {
         // Given
-        LoginRequest request = new LoginRequest("nonexistent", "password123");
+        LoginRequest request = new LoginRequest("nonexistent", "password123",false);
         when(authService.login(any(LoginRequest.class)))
             .thenThrow(new IllegalArgumentException("Invalid credentials"));
 
@@ -186,7 +186,7 @@ class AuthControllerTest {
     @Test
     void testLogin_InternalError_Returns500() {
         // Given
-        LoginRequest request = new LoginRequest("testuser", "password123");
+        LoginRequest request = new LoginRequest("testuser", "password123",false);
         when(authService.login(any(LoginRequest.class)))
             .thenThrow(new RuntimeException("Database error"));
 
@@ -220,7 +220,7 @@ class AuthControllerTest {
     @Test
     void testLogin_WithValidData_CallsService() {
         // Given
-        LoginRequest request = new LoginRequest("existinguser", "password");
+        LoginRequest request = new LoginRequest("existinguser", "password",false);
         AuthResponse expectedResponse = new AuthResponse(1L, "existinguser", "user@example.com", "token");
         when(authService.login(request)).thenReturn(expectedResponse);
 
