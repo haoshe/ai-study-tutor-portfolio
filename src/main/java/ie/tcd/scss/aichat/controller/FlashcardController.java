@@ -163,7 +163,7 @@ public class FlashcardController {
         
         FlashcardSet flashcardSet = flashcardSetRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("FlashcardSet", "id", id));
-        
+         
         // Ownership check
         if (!flashcardSet.getUser().getId().equals(user.getId())) {
             throw new ForbiddenException("You do not have permission to delete this flashcard set");
