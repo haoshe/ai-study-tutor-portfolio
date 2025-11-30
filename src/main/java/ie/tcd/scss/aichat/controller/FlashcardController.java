@@ -26,6 +26,8 @@ import ie.tcd.scss.aichat.model.User;
 import ie.tcd.scss.aichat.repository.FlashcardSetRepository;
 import ie.tcd.scss.aichat.repository.UserRepository;
 import ie.tcd.scss.aichat.service.FlashcardService;
+import ie.tcd.scss.aichat.exception.ResourceNotFoundException;
+import ie.tcd.scss.aichat.exception.ForbiddenException;
 import lombok.RequiredArgsConstructor;
 
 import java.util.HashMap;
@@ -64,13 +66,13 @@ public class FlashcardController {
             Authentication authentication) {
         // Validate input
         if (request.getStudyMaterial() == null || request.getStudyMaterial().trim().isEmpty()) {
-            return ResponseEntity.badRequest().build();
+            throw new IllegalArgumentException("Study material cannot be empty");
         }
         
         // Extract user from authenticated security context
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         User user = userRepository.findByUsername(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", "username", userDetails.getUsername()));
         
         String title = "AI Generated Flashcards";
         
@@ -109,7 +111,7 @@ public class FlashcardController {
     public ResponseEntity<List<FlashcardSetResponse>> getHistory(Authentication authentication) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         User user = userRepository.findByUsername(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", "username", userDetails.getUsername()));
         
         List<FlashcardSetResponse> history = flashcardSetRepository.findByUserIdOrderByCreatedAtDesc(user.getId())
                 .stream()
@@ -128,21 +130,17 @@ public class FlashcardController {
      * @return Flashcard set if owned by user, 403 otherwise
      */
     @GetMapping("/{id}")
-    public ResponseEntity<?> getFlashcardSet(@PathVariable Long id, Authentication authentication) {
+    public ResponseEntity<FlashcardSetResponse> getFlashcardSet(@PathVariable Long id, Authentication authentication) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         User user = userRepository.findByUsername(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", "username", userDetails.getUsername()));
         
         FlashcardSet flashcardSet = flashcardSetRepository.findById(id)
-                .orElse(null);
-        
-        if (flashcardSet == null) {
-            return ResponseEntity.notFound().build();
-        }
+                .orElseThrow(() -> new ResourceNotFoundException("FlashcardSet", "id", id));
         
         // Ownership check
         if (!flashcardSet.getUser().getId().equals(user.getId())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            throw new ForbiddenException("You do not have permission to access this flashcard set");
         }
         
         return ResponseEntity.ok(convertToDto(flashcardSet));
@@ -158,21 +156,17 @@ public class FlashcardController {
      * @return 204 if deleted, 403 if not owned by user, 404 if not found
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteFlashcardSet(@PathVariable Long id, Authentication authentication) {
+    public ResponseEntity<Void> deleteFlashcardSet(@PathVariable Long id, Authentication authentication) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         User user = userRepository.findByUsername(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", "username", userDetails.getUsername()));
         
         FlashcardSet flashcardSet = flashcardSetRepository.findById(id)
-                .orElse(null);
-        
-        if (flashcardSet == null) {
-            return ResponseEntity.notFound().build();
-        }
+                .orElseThrow(() -> new ResourceNotFoundException("FlashcardSet", "id", id));
         
         // Ownership check
         if (!flashcardSet.getUser().getId().equals(user.getId())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            throw new ForbiddenException("You do not have permission to delete this flashcard set");
         }
         
         flashcardSetRepository.delete(flashcardSet);

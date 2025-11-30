@@ -31,6 +31,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()        // Allow public access to login/register
                 .requestMatchers("/api/slides/**").permitAll()      // Allow document upload (will secure in Job 3)
+                .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/api-docs/**").permitAll()  // Allow Swagger UI access
                 .anyRequest().authenticated()                        // All other endpoints require valid JWT
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);  // Add JWT validation before auth
