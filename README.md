@@ -72,10 +72,18 @@ create the MySQL user aichat_user with password aichat_pass
 grant all required privileges
 
 4. Run backend:
+   * run these commands so your .env file will be read by the program
+   source .env
+   mvn clean install
+   source .env
+
+   * then run this line to start the backend 
    
    mvn spring-boot:run
 
+   * you should see a message like:
    * Runs on port 8080
+   * optional: check the 'ports' tab to see that this port is up and running
 
 ---
 
