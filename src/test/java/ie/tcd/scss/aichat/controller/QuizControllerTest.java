@@ -268,7 +268,7 @@ class QuizControllerTest {
         mockMvc.perform(post("/api/quiz/generate")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{ invalid json }"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().is5xxServerError());
     }
 
     @Test

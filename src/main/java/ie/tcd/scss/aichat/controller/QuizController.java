@@ -26,6 +26,8 @@ import ie.tcd.scss.aichat.model.User;
 import ie.tcd.scss.aichat.repository.QuizSetRepository;
 import ie.tcd.scss.aichat.repository.UserRepository;
 import ie.tcd.scss.aichat.service.QuizService;
+import ie.tcd.scss.aichat.exception.ResourceNotFoundException;
+import ie.tcd.scss.aichat.exception.ForbiddenException;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -46,8 +48,7 @@ public class QuizController {
         // Validation
         String studyMaterial = (String) request.get("studyMaterial");
         if (studyMaterial == null || studyMaterial.trim().isEmpty()) {
-            return ResponseEntity.badRequest()
-                .body(Map.of("error", "Study material is required and cannot be empty"));
+            throw new IllegalArgumentException("Study material is required and cannot be empty");
         }
         
         // Support both "count" and "questionCount" for backward compatibility
@@ -58,37 +59,30 @@ public class QuizController {
         
         // Validate difficulty if provided
         if (difficulty != null && !Arrays.asList("easy", "medium", "hard").contains(difficulty.toLowerCase())) {
-            return ResponseEntity.badRequest()
-                .body(Map.of("error", "Invalid difficulty. Must be 'easy', 'medium', or 'hard'"));
+            throw new IllegalArgumentException("Invalid difficulty. Must be 'easy', 'medium', or 'hard'");
         }
         
         // Extract user from authenticated security context
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         User user = userRepository.findByUsername(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", "username", userDetails.getUsername()));
         
         Long userId = user.getId();
         String title = "AI Generated Quiz";
 
-        try {
-            List<QuizQuestion> questions = quizService.generateQuiz(
-                    studyMaterial,
-                    questionCount,
-                    difficulty,
-                    userId,
-                    title
-            );
+        List<QuizQuestion> questions = quizService.generateQuiz(
+                studyMaterial,
+                questionCount,
+                difficulty,
+                userId,
+                title
+        );
 
-            if (questions == null) {
-                questions = List.of();
-            }
-
-            return ResponseEntity.ok(questions);
-
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", "Failed to generate quiz: " + e.getMessage()));
+        if (questions == null) {
+            questions = List.of();
         }
+
+        return ResponseEntity.ok(questions);
     }
     
     @GetMapping("/test")
@@ -108,7 +102,7 @@ public class QuizController {
     public ResponseEntity<List<QuizSetResponse>> getHistory(Authentication authentication) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         User user = userRepository.findByUsername(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", "username", userDetails.getUsername()));
         
         List<QuizSetResponse> history = quizSetRepository.findByUserIdOrderByCreatedAtDesc(user.getId())
                 .stream()
@@ -127,21 +121,17 @@ public class QuizController {
      * @return Quiz set if owned by user, 403 otherwise
      */
     @GetMapping("/{id}")
-    public ResponseEntity<?> getQuizSet(@PathVariable Long id, Authentication authentication) {
+    public ResponseEntity<QuizSetResponse> getQuizSet(@PathVariable Long id, Authentication authentication) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         User user = userRepository.findByUsername(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", "username", userDetails.getUsername()));
         
         QuizSet quizSet = quizSetRepository.findById(id)
-                .orElse(null);
-        
-        if (quizSet == null) {
-            return ResponseEntity.notFound().build();
-        }
+                .orElseThrow(() -> new ResourceNotFoundException("QuizSet", "id", id));
         
         // Ownership check
         if (!quizSet.getUser().getId().equals(user.getId())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            throw new ForbiddenException("You do not have permission to access this quiz set");
         }
         
         return ResponseEntity.ok(convertToDto(quizSet));
@@ -157,21 +147,17 @@ public class QuizController {
      * @return 204 if deleted, 403 if not owned by user, 404 if not found
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteQuizSet(@PathVariable Long id, Authentication authentication) {
+    public ResponseEntity<Void> deleteQuizSet(@PathVariable Long id, Authentication authentication) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         User user = userRepository.findByUsername(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", "username", userDetails.getUsername()));
         
         QuizSet quizSet = quizSetRepository.findById(id)
-                .orElse(null);
-        
-        if (quizSet == null) {
-            return ResponseEntity.notFound().build();
-        }
+                .orElseThrow(() -> new ResourceNotFoundException("QuizSet", "id", id));
         
         // Ownership check
         if (!quizSet.getUser().getId().equals(user.getId())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            throw new ForbiddenException("You do not have permission to delete this quiz set");
         }
         
         quizSetRepository.delete(quizSet);
