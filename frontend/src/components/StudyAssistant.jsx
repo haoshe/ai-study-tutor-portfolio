@@ -29,6 +29,11 @@ function StudyAssistant({userId}) {
   const [activeTab, setActiveTab] = useState('flashcards');
   const [loadingType, setLoadingType] = useState('');
 
+  // History States
+  const [flashcardHistory, setFlashcardHistory] = useState([]);
+  const [quizHistory, setQuizHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
   // helper function to get auth headers for login
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token');
@@ -440,13 +445,13 @@ const getAuthHeaders = () => {
       {/* Results Section */}
       <div className="results-section">
         <div className="tabs">
-          <button 
+          <button
             className={activeTab === 'flashcards' ? 'active' : ''}
             onClick={() => setActiveTab('flashcards')}
           >
             Flashcards ({flashcards.length})
             {flashcards.length > 0 && (
-              <button 
+              <button
                 className="reset-btn-small"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -457,13 +462,13 @@ const getAuthHeaders = () => {
               </button>
             )}
           </button>
-          <button 
+          <button
             className={activeTab === 'quiz' ? 'active' : ''}
             onClick={() => setActiveTab('quiz')}
           >
             Quiz ({quizzes.length})
             {quizzes.length > 0 && (
-              <button 
+              <button
                 className="reset-btn-small"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -473,6 +478,12 @@ const getAuthHeaders = () => {
                 ×
               </button>
             )}
+          </button>
+          <button
+            className={activeTab === 'history' ? 'active' : ''}
+            onClick={() => setActiveTab('history')}
+          >
+            History
           </button>
         </div>
 
@@ -597,6 +608,68 @@ const getAuthHeaders = () => {
                   </div>
                 ))}
               </>
+            )}
+          </div>
+        )}
+
+        {/* History Display */}
+        {activeTab === 'history' && (
+          <div className="history-container">
+            {historyLoading ? (
+              <div className="loading-container">
+                <div className="spinner"></div>
+                <p>Loading history...</p>
+              </div>
+            ) : (
+              <div className="history-content">
+                <h2>Saved Flashcard Sets</h2>
+                {flashcardHistory.length === 0 ? (
+                  <p className="no-results">No saved flashcard sets yet</p>
+                ) : (
+                  <div className="history-list">
+                    {flashcardHistory.map((set) => (
+                      <div key={set.id} className="history-item">
+                        <div className="history-item-info">
+                          <h3>{set.title}</h3>
+                          <p className="history-date">
+                            Created: {new Date(set.createdAt).toLocaleString()}
+                          </p>
+                          <p className="history-count">{set.flashcards?.length || 0} flashcards</p>
+                        </div>
+                        <div className="history-item-actions">
+                          <button className="view-btn">View</button>
+                          <button className="delete-btn">Delete</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <h2>Saved Quiz Sets</h2>
+                {quizHistory.length === 0 ? (
+                  <p className="no-results">No saved quiz sets yet</p>
+                ) : (
+                  <div className="history-list">
+                    {quizHistory.map((set) => (
+                      <div key={set.id} className="history-item">
+                        <div className="history-item-info">
+                          <h3>{set.title}</h3>
+                          <p className="history-date">
+                            Created: {new Date(set.createdAt).toLocaleString()}
+                          </p>
+                          <p className="history-count">
+                            {set.questions?.length || 0} questions - {set.difficulty}
+                          </p>
+                        </div>
+                        <div className="history-item-actions">
+                          <button className="view-btn">View</button>
+                          <button className="delete-btn">Delete</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
           </div>
         )}
