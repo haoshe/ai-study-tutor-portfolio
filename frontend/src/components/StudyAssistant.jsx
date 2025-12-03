@@ -308,6 +308,112 @@ const getAuthHeaders = () => {
     }
   };
 
+  // Fetch Flashcard History
+  const fetchFlashcardHistory = async () => {
+    setHistoryLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/flashcards/history`, {
+        method: 'GET',
+        headers: {
+          ...getAuthHeaders(),
+        }
+      });
+
+      if (response.status === 401) {
+        // Token expired or invalid
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.reload(); // Redirect to login
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch flashcard history (${response.status})`);
+      }
+
+      const data = await response.json();
+      setFlashcardHistory(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Flashcard history fetch error:', err);
+      setError(err.message);
+      setFlashcardHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  // Fetch Quiz History
+  const fetchQuizHistory = async () => {
+    setHistoryLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/quiz/history`, {
+        method: 'GET',
+        headers: {
+          ...getAuthHeaders(),
+        }
+      });
+
+      if (response.status === 401) {
+        // Token expired or invalid
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.reload(); // Redirect to login
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch quiz history (${response.status})`);
+      }
+
+      const data = await response.json();
+      setQuizHistory(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Quiz history fetch error:', err);
+      setError(err.message);
+      setQuizHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  // View Flashcard Set from History
+  const viewFlashcardSet = (flashcardSet) => {
+    // Load flashcards from the saved set
+    setFlashcards(flashcardSet.flashcards || []);
+    setVisibleAnswers({});
+    setFlashcardWarning('');
+    // Switch to flashcards tab
+    setActiveTab('flashcards');
+  };
+
+  // View Quiz Set from History
+  const viewQuizSet = (quizSet) => {
+    // Transform saved quiz format to match UI format
+    const transformedQuestions = (quizSet.questions || []).map(q => {
+      // Convert from database format (optionA/B/C/D, correctAnswer='A')
+      // to UI format (options=[], correctAnswer=0)
+      const options = [q.optionA, q.optionB, q.optionC, q.optionD];
+      const correctAnswerIndex = ['A', 'B', 'C', 'D'].indexOf(q.correctAnswer);
+
+      return {
+        question: q.question,
+        options: options,
+        correctAnswer: correctAnswerIndex,
+        explanation: q.explanation
+      };
+    });
+
+    setQuizzes(transformedQuestions);
+    setUserAnswers({});
+    setQuizWarning('');
+    // Switch to quiz tab
+    setActiveTab('quiz');
+  };
+
   // Clear file upload
   const clearFileUpload = () => {
     setUploadedContent('');
@@ -481,7 +587,11 @@ const getAuthHeaders = () => {
           </button>
           <button
             className={activeTab === 'history' ? 'active' : ''}
-            onClick={() => setActiveTab('history')}
+            onClick={() => {
+              setActiveTab('history');
+              fetchFlashcardHistory();
+              fetchQuizHistory();
+            }}
           >
             History
           </button>
@@ -637,7 +747,7 @@ const getAuthHeaders = () => {
                           <p className="history-count">{set.flashcards?.length || 0} flashcards</p>
                         </div>
                         <div className="history-item-actions">
-                          <button className="view-btn">View</button>
+                          <button className="view-btn" onClick={() => viewFlashcardSet(set)}>View</button>
                           <button className="delete-btn">Delete</button>
                         </div>
                       </div>
@@ -662,7 +772,7 @@ const getAuthHeaders = () => {
                           </p>
                         </div>
                         <div className="history-item-actions">
-                          <button className="view-btn">View</button>
+                          <button className="view-btn" onClick={() => viewQuizSet(set)}>View</button>
                           <button className="delete-btn">Delete</button>
                         </div>
                       </div>

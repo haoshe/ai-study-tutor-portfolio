@@ -466,13 +466,433 @@ Each step was tested incrementally:
 - **Consistent Styling:** Reused existing patterns (loading spinner, no-results message)
 - **Progressive Enhancement:** Built UI first, will add functionality in next phase
 
-## Next Development Phase
-The next phase will focus on:
-1. Implementing `fetchFlashcardHistory()` API call
-2. Implementing `fetchQuizHistory()` API call
-3. Connecting View button to load saved sets
-4. Connecting Delete button to remove sets from database
-5. Testing with actual user data and saved sets
+---
+
+### Step 6: API Integration - History Data Fetching
+
+**User Request:** "Good, let's start the next job"
+
+**Context:** With the History tab UI complete, the next phase involved implementing the actual API calls to fetch saved flashcard and quiz sets from the backend.
+
+#### Implementation: fetchFlashcardHistory() Function
+
+**File Modified:** `frontend/src/components/StudyAssistant.jsx` (lines 306-340)
+
+Created an async function to fetch flashcard history from the backend:
+
+```javascript
+// Fetch Flashcard History
+const fetchFlashcardHistory = async () => {
+  setHistoryLoading(true);
+  setError('');
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/flashcards/history`, {
+      method: 'GET',
+      headers: {
+        ...getAuthHeaders(),
+      }
+    });
+
+    if (response.status === 401) {
+      // Token expired or invalid
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.reload(); // Redirect to login
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch flashcard history (${response.status})`);
+    }
+
+    const data = await response.json();
+    setFlashcardHistory(Array.isArray(data) ? data : []);
+  } catch (err) {
+    console.error('Flashcard history fetch error:', err);
+    setError(err.message);
+    setFlashcardHistory([]);
+  } finally {
+    setHistoryLoading(false);
+  }
+};
+```
+
+**Key Features:**
+- JWT authentication with Bearer token
+- 401 handling (token expiration)
+- Error handling and logging
+- Loading state management
+- Array validation for response data
+
+#### Implementation: fetchQuizHistory() Function
+
+**File Modified:** `frontend/src/components/StudyAssistant.jsx` (lines 342-376)
+
+Created similar async function for quiz history:
+
+```javascript
+// Fetch Quiz History
+const fetchQuizHistory = async () => {
+  setHistoryLoading(true);
+  setError('');
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/quiz/history`, {
+      method: 'GET',
+      headers: {
+        ...getAuthHeaders(),
+      }
+    });
+
+    if (response.status === 401) {
+      // Token expired or invalid
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.reload(); // Redirect to login
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch quiz history (${response.status})`);
+    }
+
+    const data = await response.json();
+    setQuizHistory(Array.isArray(data) ? data : []);
+  } catch (err) {
+    console.error('Quiz history fetch error:', err);
+    setError(err.message);
+    setQuizHistory([]);
+  } finally {
+    setHistoryLoading(false);
+  }
+};
+```
+
+#### Connecting History Tab to API Calls
+
+**File Modified:** `frontend/src/components/StudyAssistant.jsx` (lines 477-486)
+
+Connected the History tab button to trigger both fetch functions:
+
+```javascript
+<button
+  className={activeTab === 'history' ? 'active' : ''}
+  onClick={() => {
+    setActiveTab('history');
+    fetchFlashcardHistory();
+    fetchQuizHistory();
+  }}
+>
+  History
+</button>
+```
+
+**Behavior:** When user clicks History tab:
+1. Switch to history view
+2. Fetch flashcard sets from backend
+3. Fetch quiz sets from backend
+4. Display loading spinner during fetch
+5. Show data or empty state messages
+
+---
+
+### Step 7: View Functionality Implementation
+
+**User Request:** "I used some study material to generate flashcards and quiz, but when I click View in history, nothing happened"
+
+**Problem Identified:** The View buttons in the History UI were placeholder buttons with no functionality.
+
+#### Implementation: viewFlashcardSet() Function
+
+**File Modified:** `frontend/src/components/StudyAssistant.jsx` (lines 378-386)
+
+Created function to load saved flashcard sets:
+
+```javascript
+// View Flashcard Set from History
+const viewFlashcardSet = (flashcardSet) => {
+  // Load flashcards from the saved set
+  setFlashcards(flashcardSet.flashcards || []);
+  setVisibleAnswers({});
+  setFlashcardWarning('');
+  // Switch to flashcards tab
+  setActiveTab('flashcards');
+};
+```
+
+**Functionality:**
+- Loads flashcards from the saved set into state
+- Resets answer visibility
+- Clears warnings
+- Automatically switches to Flashcards tab
+
+#### Implementation: viewQuizSet() Function
+
+**File Modified:** `frontend/src/components/StudyAssistant.jsx` (lines 388-410)
+
+Created function to load saved quiz sets:
+
+```javascript
+// View Quiz Set from History
+const viewQuizSet = (quizSet) => {
+  // Transform saved quiz format to match UI format
+  const transformedQuestions = (quizSet.questions || []).map(q => {
+    // Convert from database format (optionA/B/C/D, correctAnswer='A')
+    // to UI format (options=[], correctAnswer=0)
+    const options = [q.optionA, q.optionB, q.optionC, q.optionD];
+    const correctAnswerIndex = ['A', 'B', 'C', 'D'].indexOf(q.correctAnswer);
+
+    return {
+      question: q.question,
+      options: options,
+      correctAnswer: correctAnswerIndex,
+      explanation: q.explanation
+    };
+  });
+
+  setQuizzes(transformedQuestions);
+  setUserAnswers({});
+  setQuizWarning('');
+  // Switch to quiz tab
+  setActiveTab('quiz');
+};
+```
+
+**Functionality:**
+- Transforms database format to UI format
+- Loads questions into quiz state
+- Resets user answers
+- Clears warnings
+- Automatically switches to Quiz tab
+
+#### Connecting View Buttons
+
+**Files Modified:**
+- Flashcard View button: `frontend/src/components/StudyAssistant.jsx` (line 629)
+- Quiz View button: `frontend/src/components/StudyAssistant.jsx` (line 654)
+
+**Flashcard View Button:**
+```javascript
+<button className="view-btn" onClick={() => viewFlashcardSet(set)}>View</button>
+```
+
+**Quiz View Button:**
+```javascript
+<button className="view-btn" onClick={() => viewQuizSet(set)}>View</button>
+```
+
+---
+
+### Step 8: Critical Bug Fix - Quiz Data Format Mismatch
+
+**User Request:** "When I click View quiz, this happened" (shared error screenshot)
+
+**Error Encountered:**
+```
+TypeError: Cannot read properties of undefined (reading 'C')
+at calculateScore (http://localhost:3000/main.adfc6085a9c0457e4eae.hot-update.js:87:13)
+at StudyAssistant (http://localhost:3000/main.adfc6085a9c0457e4eae.hot-update.js:844:37)
+```
+
+**Root Cause Analysis:**
+
+The `calculateScore` function expected quiz data in a specific format:
+```javascript
+// Line 64: Expected format
+if (userAnswers[index] === question.options[question.correctAnswer])
+```
+
+However, saved quiz data from the database had a different structure:
+- **Fresh quiz data** (from AI generation):
+  - `options: ['option1', 'option2', 'option3', 'option4']`
+  - `correctAnswer: 0` (index)
+
+- **Saved quiz data** (from database):
+  - `optionA: 'option1', optionB: 'option2', optionC: 'option3', optionD: 'option4'`
+  - `correctAnswer: 'A'` (letter)
+
+The `calculateScore` function tried to access `question.options[question.correctAnswer]` where:
+- `question.options` was `undefined` (because the database format uses `optionA/B/C/D`)
+- `question.correctAnswer` was `'C'` (a letter, not a number)
+- This resulted in: `undefined['C']` → error
+
+**Solution Implemented:**
+
+Enhanced the `viewQuizSet()` function to transform the database format to match the UI format:
+
+```javascript
+const transformedQuestions = (quizSet.questions || []).map(q => {
+  // Convert from database format (optionA/B/C/D, correctAnswer='A')
+  // to UI format (options=[], correctAnswer=0)
+  const options = [q.optionA, q.optionB, q.optionC, q.optionD];
+  const correctAnswerIndex = ['A', 'B', 'C', 'D'].indexOf(q.correctAnswer);
+
+  return {
+    question: q.question,
+    options: options,
+    correctAnswer: correctAnswerIndex,
+    explanation: q.explanation
+  };
+});
+```
+
+**Transformation Details:**
+1. **Options Array Creation:** Combined `optionA`, `optionB`, `optionC`, `optionD` into `options: []`
+2. **Index Conversion:** Converted `correctAnswer: 'A'` to `correctAnswer: 0` using `indexOf()`
+3. **Preserved Fields:** Kept `question` and `explanation` unchanged
+
+**Result:** Quiz View button now works correctly. Clicking View loads the quiz without errors.
+
+---
+
+## Testing Results
+
+### Successful Test Cases:
+
+1. **✅ History Tab Display**
+   - Clicking History tab successfully fetches and displays saved sets
+   - Loading spinner shows during API calls
+   - Empty states display when no saved sets exist
+
+2. **✅ Flashcard View Functionality**
+   - Clicking View on flashcard set loads flashcards
+   - Automatically switches to Flashcards tab
+   - All flashcards display correctly
+
+3. **✅ Quiz View Functionality**
+   - Clicking View on quiz set loads questions
+   - Data transformation works correctly
+   - Automatically switches to Quiz tab
+   - Score calculation works without errors
+
+4. **✅ API Authentication**
+   - JWT tokens properly included in requests
+   - 401 errors handled with token cleanup and reload
+
+---
+
+## Files Modified Summary
+
+### JavaScript Files
+1. **frontend/src/components/StudyAssistant.jsx**
+   - Added `fetchFlashcardHistory()` function (lines 306-340)
+   - Added `fetchQuizHistory()` function (lines 342-376)
+   - Added `viewFlashcardSet()` function (lines 378-386)
+   - Added `viewQuizSet()` function with data transformation (lines 388-410)
+   - Connected History tab button to fetch functions (lines 477-486)
+   - Connected View buttons to view functions (lines 629, 654)
+
+### No CSS Changes
+- All styling was completed in previous phase
+
+---
+
+## Technical Implementation Details
+
+### Data Flow Architecture
+
+```
+User Action → History Tab Click
+    ↓
+fetchFlashcardHistory() + fetchQuizHistory()
+    ↓
+GET /api/flashcards/history + GET /api/quiz/history
+    ↓
+Backend Response (with JWT auth)
+    ↓
+State Updates: setFlashcardHistory(), setQuizHistory()
+    ↓
+UI Renders History Items
+
+User Action → View Button Click
+    ↓
+viewFlashcardSet() OR viewQuizSet()
+    ↓
+Data Transformation (for quizzes only)
+    ↓
+State Updates: setFlashcards() OR setQuizzes()
+    ↓
+Tab Switch: setActiveTab()
+    ↓
+Display Saved Content
+```
+
+### API Endpoints Used
+
+| Endpoint | Method | Purpose | Authentication |
+|----------|--------|---------|----------------|
+| `/api/flashcards/history` | GET | Fetch user's saved flashcard sets | Required (JWT) |
+| `/api/quiz/history` | GET | Fetch user's saved quiz sets | Required (JWT) |
+
+### Error Handling Strategy
+
+1. **Network Errors:** Caught in try-catch, displayed to user via `setError()`
+2. **Authentication Errors:** 401 status triggers token cleanup and page reload
+3. **Data Validation:** Response data validated as array before state update
+4. **Format Mismatch:** Data transformation handles database-to-UI format conversion
+
+---
+
+## Challenges and Solutions
+
+| Challenge | User Feedback | Solution | Result |
+|-----------|--------------|----------|--------|
+| View buttons not working | "When I click View in history, nothing happened" | Implemented `viewFlashcardSet()` and `viewQuizSet()` functions | View functionality works for both flashcards and quizzes |
+| Quiz format mismatch error | "When I click View quiz, this happened" (error screenshot) | Added data transformation in `viewQuizSet()` to convert database format (optionA/B/C/D) to UI format (options array) | Quiz viewing works without errors |
+
+---
+
+## Design Patterns Applied
+
+1. **API Separation of Concerns:** Separate functions for fetching vs. viewing data
+2. **Data Transformation Layer:** `viewQuizSet()` acts as adapter between database and UI formats
+3. **Optimistic UI Updates:** Immediate tab switching for better UX
+4. **Error Recovery:** Token expiration handled with automatic cleanup
+5. **State Management:** Centralized state updates with React hooks
+
+---
+
+## Current Feature Status
+
+### Completed ✅
+- ✅ History tab UI structure
+- ✅ State management for history data
+- ✅ API integration (fetch flashcard history)
+- ✅ API integration (fetch quiz history)
+- ✅ View functionality for flashcard sets
+- ✅ View functionality for quiz sets
+- ✅ Data format transformation for quizzes
+- ✅ Error handling and loading states
+- ✅ Authentication integration
+- ✅ Testing with real data
+
+### Not Yet Implemented ⏳
+- ⏳ Delete functionality for saved sets
+- ⏳ Confirmation dialogs for delete operations
+- ⏳ Optimistic UI updates for delete operations
+
+---
+
+## Next Steps
+
+The next development phase will focus on:
+1. Implementing delete functionality for both flashcard and quiz sets
+2. Adding confirmation dialogs to prevent accidental deletions
+3. Implementing optimistic UI updates (removing items before server confirmation)
+4. Error handling for failed delete operations
+5. Testing delete functionality with various scenarios
+
+---
 
 ## Conclusion
-Successfully implemented the History tab UI foundation with proper state management, tab navigation, and comprehensive styling. The UI is ready for API integration in the next development phase. All styling issues were resolved through iterative user feedback, resulting in a clean, consistent interface that matches the existing Flashcards and Quiz tabs.
+
+Successfully completed the History tab API integration and view functionality implementation. The History feature is now fully functional for viewing saved flashcard and quiz sets. Key achievements include:
+
+- Seamless API integration with JWT authentication
+- Working view functionality for both content types
+- Critical bug fix for quiz data format mismatch
+- Comprehensive error handling
+- Successful testing with real user data
+
+The History tab now allows users to browse their saved study materials and load them back into the application for review. The next phase will add delete functionality to complete the full CRUD operations for history management.
