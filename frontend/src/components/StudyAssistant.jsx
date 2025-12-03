@@ -414,6 +414,74 @@ const getAuthHeaders = () => {
     setActiveTab('quiz');
   };
 
+  // Delete Flashcard Set from History
+  const deleteFlashcardSet = async (setId) => {
+    if (!window.confirm('Are you sure you want to delete this flashcard set?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/flashcards/${setId}`, {
+        method: 'DELETE',
+        headers: {
+          ...getAuthHeaders(),
+        }
+      });
+
+      if (response.status === 401) {
+        // Token expired or invalid
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.reload();
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete flashcard set (${response.status})`);
+      }
+
+      // Remove from local state (optimistic update)
+      setFlashcardHistory(prev => prev.filter(set => set.id !== setId));
+    } catch (err) {
+      console.error('Flashcard delete error:', err);
+      setError(err.message);
+    }
+  };
+
+  // Delete Quiz Set from History
+  const deleteQuizSet = async (setId) => {
+    if (!window.confirm('Are you sure you want to delete this quiz set?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/quiz/${setId}`, {
+        method: 'DELETE',
+        headers: {
+          ...getAuthHeaders(),
+        }
+      });
+
+      if (response.status === 401) {
+        // Token expired or invalid
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.reload();
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete quiz set (${response.status})`);
+      }
+
+      // Remove from local state (optimistic update)
+      setQuizHistory(prev => prev.filter(set => set.id !== setId));
+    } catch (err) {
+      console.error('Quiz delete error:', err);
+      setError(err.message);
+    }
+  };
+
   // Clear file upload
   const clearFileUpload = () => {
     setUploadedContent('');
@@ -748,7 +816,7 @@ const getAuthHeaders = () => {
                         </div>
                         <div className="history-item-actions">
                           <button className="view-btn" onClick={() => viewFlashcardSet(set)}>View</button>
-                          <button className="delete-btn">Delete</button>
+                          <button className="delete-btn" onClick={() => deleteFlashcardSet(set.id)}>Delete</button>
                         </div>
                       </div>
                     ))}
@@ -773,7 +841,7 @@ const getAuthHeaders = () => {
                         </div>
                         <div className="history-item-actions">
                           <button className="view-btn" onClick={() => viewQuizSet(set)}>View</button>
-                          <button className="delete-btn">Delete</button>
+                          <button className="delete-btn" onClick={() => deleteQuizSet(set.id)}>Delete</button>
                         </div>
                       </div>
                     ))}
