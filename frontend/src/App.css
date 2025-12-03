@@ -41,21 +41,23 @@ body {
 }
 
 .logout-btn {
-  padding: 8px 20px;
+  padding: 6px 16px;
   background-color: #f44336;
   color: white;
   border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 600;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.2s;
+  width: auto;
+  max-width: 100px;
 }
 
 .logout-btn:hover {
   background-color: #d32f2f;
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(244, 67, 54, 0.3);
+  box-shadow: 0 2px 6px rgba(244, 67, 54, 0.3);
 }
 
 .logout-btn:active {
@@ -75,6 +77,8 @@ body {
   }
 
   .logout-btn {
-    width: 100%;
+    align-self: flex-end;
+    padding: 6px 14px;
+    font-size: 12px;
   }
 }
