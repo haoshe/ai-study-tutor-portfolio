@@ -1067,3 +1067,48 @@ The History tab now allows users to:
 - Clean separation of concerns with dedicated functions
 
 The History tab is now production-ready and awaiting user testing.
+
+---
+
+## Post-Implementation UI Fixes
+
+### Fix: Logout Button Size Reduction
+
+**Date:** December 3, 2025 (Post-History Implementation)
+
+**User Feedback:** "let's fix the logout button, it's still too big"
+
+**Problem:** The logout button in the app header was stretching across the full width of the header with a red background, making it visually overwhelming.
+
+**Root Cause:** The button had `min-width: 80px` but no constraints on maximum width, causing it to expand based on flex container behavior.
+
+**Solution Implemented:**
+
+**File Modified:** `frontend/src/App.css` (lines 43-55)
+
+Changed button sizing strategy:
+```css
+/* Before */
+.logout-btn {
+  min-width: 80px;
+}
+
+/* After */
+.logout-btn {
+  width: auto;
+  max-width: 100px;
+}
+```
+
+**Changes:**
+- Removed `min-width: 80px` constraint
+- Added `width: auto` to shrink button to fit text content
+- Added `max-width: 100px` to prevent excessive growth
+
+**Result:** Logout button now displays as a compact button in the top-right corner, only as wide as needed for the "Logout" text (approximately 80-90px).
+
+**Visual Impact:**
+- Button appears properly sized and proportional to header
+- Red background no longer stretches across entire header
+- Maintains all hover effects and styling
+- Consistent with modern web UI conventions
