@@ -42,14 +42,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
         
         // Extract Authorization header
-        final String authorizationHeader = request.getHeader("Authorization");
+        final String authorizationHeader = request.getHeader("Study-Auth");
 
         String username = null;
         String jwtToken = null;
 
         // Check if header contains Bearer token
-        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-            jwtToken = authorizationHeader.substring(7); // Remove "Bearer " prefix
+        if (authorizationHeader != null) {
+            jwtToken = authorizationHeader;
             
             try {
                 username = jwtUtil.extractUsername(jwtToken);
