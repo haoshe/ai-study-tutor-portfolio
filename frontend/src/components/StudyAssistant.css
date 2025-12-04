@@ -1316,3 +1316,50 @@
     grid-template-columns: 1fr;
   }
 }
+
+.drag-upload-zone {
+  border: 2px dashed var(--border-color);
+  background: var(--bg-tertiary);
+  padding: 20px;
+  border-radius: var(--panel-radius);
+  text-align: center;
+  margin: 12px 0;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.drag-upload-zone.active {
+  background: var(--accent-primary-light);
+  border-color: var(--accent-primary);
+}
+
+.text-source-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.text-source-input {
+  min-height: 100px;
+  padding: 12px;
+  font-size: 14px;
+  border-radius: var(--card-radius);
+  border: 1px solid var(--border-color);
+  resize: vertical;
+}
+
+.add-text-source-btn {
+  background: var(--accent-secondary);
+  color: white;
+  border: none;
+  border-radius: var(--btn-radius);
+  padding: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.add-text-source-btn:hover {
+  background: #16a34a;
+}

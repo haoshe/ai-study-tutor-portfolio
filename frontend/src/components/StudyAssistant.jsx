@@ -32,6 +32,9 @@ function StudyAssistant({ userId }) {
   const [expandedPanel, setExpandedPanel] = useState(null);
   const [loading, setLoading] = useState({ flashcards: false, quiz: false, chat: false });
   const [error, setError] = useState('');
+  const [dragActive, setDragActive] = useState(false);
+  const [textInput, setTextInput] = useState('');
+
 
   // ============ REFS ============
   const fileInputRef = useRef(null);
@@ -109,6 +112,7 @@ function StudyAssistant({ userId }) {
       } catch (err) {
         setError(`Failed to upload ${file.name}: ${err.message}`);
       }
+      
     }
 
     setUploadingFile(false);
@@ -150,6 +154,45 @@ function StudyAssistant({ userId }) {
       .map(s => s.content)
       .join('\n\n');
   };
+
+  const addTextSource = () => {
+  if (!textInput.trim()) return;
+
+  const newSource = {
+    id: Date.now() + Math.random(),
+    name: "Text Source",
+    type: "text",
+    content: textInput,
+    uploadedAt: new Date()
+  };
+
+  setSources(prev => [...prev, newSource]);
+  setSelectedSources(prev => new Set([...prev, newSource.id]));
+  setTextInput('');
+};
+
+    const handleDrag = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (e.type === "dragenter" || e.type === "dragover") {
+        setDragActive(true);
+      } else if (e.type === "dragleave") {
+        setDragActive(false);
+      }
+    };
+
+    const handleDrop = async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDragActive(false);
+
+      const files = e.dataTransfer.files;
+      if (!files.length) return;
+
+      // Reuse your existing file upload handler
+      await handleFileUpload({ target: { files } });
+    };
 
   // ============ FLASHCARD FUNCTIONS ============
   const generateFlashcards = async () => {
@@ -456,6 +499,29 @@ function StudyAssistant({ userId }) {
             style={{ display: 'none' }}
             multiple
           />
+
+          <div
+            className={`drag-upload-zone ${dragActive ? "active" : ""}`}
+            onDragEnter={handleDrag}
+            onDragOver={handleDrag}
+            onDragLeave={handleDrag}
+            onDrop={handleDrop}
+          >
+            <p>Drag & drop PDF/PPT files here</p>
+            <p className="hint">(or use the button above)</p>
+          </div>
+
+          <div className="text-source-box">
+            <textarea
+              className="text-source-input"
+              placeholder="Paste or type study material here…"
+              value={textInput}
+              onChange={(e) => setTextInput(e.target.value)}
+            />
+            <button className="add-text-source-btn" onClick={addTextSource}>
+              Add Text Source
+            </button>
+          </div>
 
           <p className="source-hint">Upload PDF or PowerPoint files</p>
 
