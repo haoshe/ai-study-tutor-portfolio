@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import './StudyAssistant.css';
 
-const API_BASE_URL = ''; // Empty because we're using proxy
+// Use environment variable for API URL, fallback to proxy (empty string) for local development
+const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
 function StudyAssistant({userId}) {
   // Study Material States

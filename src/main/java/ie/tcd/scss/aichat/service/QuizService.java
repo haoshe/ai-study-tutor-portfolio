@@ -4,7 +4,6 @@ import ie.tcd.scss.aichat.dto.QuizQuestion;
 import ie.tcd.scss.aichat.model.QuizSet;
 import ie.tcd.scss.aichat.model.User;
 import ie.tcd.scss.aichat.repository.QuizSetRepository;
-import ie.tcd.scss.aichat.repository.QuizQuestionRepository;
 import ie.tcd.scss.aichat.repository.UserRepository;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
@@ -23,14 +22,12 @@ public class QuizService {
     private static final int MAX_TOKENS_PER_CHUNK = 20000; // Safe universal default for all GPT models
     private static final int CHARS_PER_TOKEN = 4; // Rough estimate: 1 token ≈ 4 chars
     private final QuizSetRepository quizSetRepository;
-    private final QuizQuestionRepository quizQuestionRepository;
     private final UserRepository userRepository;
     
     public QuizService(ChatModel chatModel, QuizSetRepository quizSetRepository, 
-                      QuizQuestionRepository quizQuestionRepository, UserRepository userRepository) {
+                      UserRepository userRepository) {
         this.chatClient = ChatClient.builder(chatModel).build();
         this.quizSetRepository = quizSetRepository;
-        this.quizQuestionRepository = quizQuestionRepository;
         this.userRepository = userRepository;
     }
 
@@ -139,6 +136,9 @@ public class QuizService {
 
     
     private void saveQuizToDatabase(List<QuizQuestion> questionDTOs, String studyMaterial, String difficulty, Long userId, String title) {
+        System.out.println("=== SAVING QUIZ TO DATABASE ===");
+        System.out.println("Number of questions to save: " + questionDTOs.size());
+        
         // Get user
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
@@ -149,8 +149,7 @@ public class QuizService {
         quizSet.setStudyMaterial(studyMaterial);
         quizSet.setDifficulty(difficulty);
         
-        QuizSet savedQuizSet = quizSetRepository.save(quizSet);
-        
+        // Create question entities and establish bi-directional relationship
         for (int i = 0; i < questionDTOs.size(); i++) {
             QuizQuestion dto = questionDTOs.get(i);
             ie.tcd.scss.aichat.model.QuizQuestion entity = new ie.tcd.scss.aichat.model.QuizQuestion();
@@ -168,10 +167,20 @@ public class QuizService {
             entity.setCorrectAnswer(String.valueOf(correctLetter));
             entity.setExplanation(dto.getExplanation());
             entity.setPosition(i);
-            entity.setQuizSet(savedQuizSet);
+            entity.setQuizSet(quizSet);  // Set parent reference
             
-            quizQuestionRepository.save(entity);
+            quizSet.getQuestions().add(entity);  // Add to parent's collection
+            
+            System.out.println("Added question " + i + ": " + dto.getQuestion().substring(0, Math.min(50, dto.getQuestion().length())));
         }
+        
+        System.out.println("Total questions in quiz: " + quizSet.getQuestions().size());
+        
+        // Save the set with cascade - will automatically save all questions
+        QuizSet savedSet = quizSetRepository.save(quizSet);
+        
+        System.out.println("QuizSet saved with ID: " + savedSet.getId());
+        System.out.println("=== END SAVING QUIZ ===");
     }
     
     private String buildQuizPrompt(String studyMaterial, int count, String difficulty) {

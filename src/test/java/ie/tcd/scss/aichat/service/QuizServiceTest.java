@@ -3,7 +3,6 @@ package ie.tcd.scss.aichat.service;
 import ie.tcd.scss.aichat.dto.QuizQuestion;
 import ie.tcd.scss.aichat.model.User;
 import ie.tcd.scss.aichat.repository.QuizSetRepository;
-import ie.tcd.scss.aichat.repository.QuizQuestionRepository;
 import ie.tcd.scss.aichat.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,16 +36,13 @@ class QuizServiceTest {
     private QuizSetRepository quizSetRepository;
     
     @Mock
-    private QuizQuestionRepository quizQuestionRepository;
-    
-    @Mock
     private UserRepository userRepository;
     
     private QuizService quizService;
     
     @BeforeEach
     void setUp() {
-        quizService = new QuizService(chatModel, quizSetRepository, quizQuestionRepository, userRepository);
+        quizService = new QuizService(chatModel, quizSetRepository, userRepository);
         
         // Mock user repository to return a test user
         User testUser = new User();
@@ -56,7 +52,6 @@ class QuizServiceTest {
         
         // Mock repository saves
         lenient().when(quizSetRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        lenient().when(quizQuestionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     }
     
     @Test
