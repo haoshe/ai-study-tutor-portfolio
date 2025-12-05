@@ -40,17 +40,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, 
                                     HttpServletResponse response, 
                                     FilterChain filterChain) throws ServletException, IOException {
+
+        logger.info("=== JWT Filter Debug ===");
+    logger.info("Request URI: " + request.getRequestURI());
+    logger.info("Request Method: " + request.getMethod());                                
         
         // Extract Authorization header
-        final String authorizationHeader = request.getHeader("Authorization");
+        final String authorizationHeader = request.getHeader("Study-Auth");
+        logger.info("Study-Auth header: " + authorizationHeader);
+
 
         String username = null;
         String jwtToken = null;
 
         // Check if header contains Bearer token
+         // Check if header contains Bearer token
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-            jwtToken = authorizationHeader.substring(7); // Remove "Bearer " prefix
-            
+            jwtToken = authorizationHeader.substring(7);  // Remove "Bearer " prefix (7 characters)
+
             try {
                 username = jwtUtil.extractUsername(jwtToken);
             } catch (Exception e) {
@@ -58,7 +65,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 logger.warn("Failed to extract username from JWT: " + e.getMessage());
             }
         }
-
         // If we have a username and no authentication is set yet
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             

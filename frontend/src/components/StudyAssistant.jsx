@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './StudyAssistant.css';
 
-const API_BASE_URL = '';
+const API_BASE_URL = '';//'https://8080--main--csu33012-2526-project23--audejait.coder.scss.tcd.ie';
 
 function StudyAssistant({ userId }) {
   // ============ SOURCES PANEL STATE ============
@@ -43,7 +43,7 @@ function StudyAssistant({ userId }) {
   // ============ AUTH HELPER ============
   const getAuthHeaders = () => {
     const token = localStorage.getItem('token');
-    return token ? { 'Authorization': `Bearer ${token}` } : {};
+    return token ? { 'Study-Auth': `Bearer ${token}` } : {};
   };
 
   // ============ AUTO-SCROLL CHAT ============
@@ -210,6 +210,8 @@ function StudyAssistant({ userId }) {
     setFlippedCards({});
 
     try {
+      console.log('Attempting to fetch:', `${API_BASE_URL}/api/flashcards/generate`);
+console.log('Auth headers:', getAuthHeaders());
       const response = await fetch(`${API_BASE_URL}/api/flashcards/generate`, {
         method: 'POST',
         headers: {
