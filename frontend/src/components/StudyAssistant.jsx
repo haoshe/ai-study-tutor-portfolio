@@ -205,7 +205,16 @@ const getAuthHeaders = () => {
       }
 
       if (!response.ok) {
-        throw new Error(`Flashcards failed to generate (${response.status}). The source material may be too short or unsupported.`);
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.message || errorData.error || 'Unknown error';
+        
+        if (response.status === 413 || errorMessage.includes('too large')) {
+          throw new Error('File is too large. Maximum 50MB or 2 million characters allowed.');
+        } else if (response.status === 500) {
+          throw new Error(`Flashcards failed to generate. ${errorMessage}`);
+        } else {
+          throw new Error(`Flashcards failed to generate (${response.status}). ${errorMessage}`);
+        }
       }
 
       const data = await response.json();
@@ -282,7 +291,16 @@ const getAuthHeaders = () => {
       }
 
       if (!response.ok) {
-        throw new Error(`Quiz failed to generate (${response.status}). The source material may be too short or unsupported.`);
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.message || errorData.error || 'Unknown error';
+        
+        if (response.status === 413 || errorMessage.includes('too large')) {
+          throw new Error('File is too large. Maximum 50MB or 2 million characters allowed.');
+        } else if (response.status === 500) {
+          throw new Error(`Quiz failed to generate. ${errorMessage}`);
+        } else {
+          throw new Error(`Quiz failed to generate (${response.status}). ${errorMessage}`);
+        }
       }
 
       const data = await response.json();
