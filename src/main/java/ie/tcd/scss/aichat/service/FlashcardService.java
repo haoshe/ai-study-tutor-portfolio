@@ -3,7 +3,6 @@ package ie.tcd.scss.aichat.service;
 import ie.tcd.scss.aichat.dto.Flashcard;
 import ie.tcd.scss.aichat.model.FlashcardSet;
 import ie.tcd.scss.aichat.model.User;
-import ie.tcd.scss.aichat.repository.FlashcardRepository;
 import ie.tcd.scss.aichat.repository.FlashcardSetRepository;
 import ie.tcd.scss.aichat.repository.UserRepository;
 import org.springframework.ai.chat.client.ChatClient;
@@ -22,9 +21,6 @@ import java.util.regex.Pattern;
 public class FlashcardService {
 
     private final ChatClient chatClient;
-
-    // From database branch
-    private final FlashcardRepository flashcardRepository;
     private final FlashcardSetRepository flashcardSetRepository;
     private final UserRepository userRepository;
 
@@ -36,12 +32,10 @@ public class FlashcardService {
 
     public FlashcardService(
             ChatModel chatModel,
-            FlashcardRepository flashcardRepository,
             FlashcardSetRepository flashcardSetRepository,
             UserRepository userRepository
     ) {
         this.chatClient = ChatClient.builder(chatModel).build();
-        this.flashcardRepository = flashcardRepository;
         this.flashcardSetRepository = flashcardSetRepository;
         this.userRepository = userRepository;
     }
@@ -154,6 +148,11 @@ public class FlashcardService {
             Long userId,
             String title
     ) {
+        System.out.println("=== SAVING FLASHCARDS TO DATABASE ===");
+        System.out.println("Number of flashcard DTOs to save: " + flashcardDTOs.size());
+        System.out.println("User ID: " + userId);
+        System.out.println("Title: " + title);
+        
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
@@ -162,21 +161,31 @@ public class FlashcardService {
         set.setTitle(title != null ? title : "AI Generated Flashcards");
         set.setStudyMaterial(studyMaterial);
 
-        FlashcardSet savedSet = flashcardSetRepository.save(set);
-
+        // Create flashcard entities and establish bi-directional relationship
         for (int i = 0; i < flashcardDTOs.size(); i++) {
             Flashcard dto = flashcardDTOs.get(i);
 
             ie.tcd.scss.aichat.model.Flashcard entity =
                     new ie.tcd.scss.aichat.model.Flashcard();
 
-            entity.setFlashcardSet(savedSet);
             entity.setQuestion(dto.getQuestion());
             entity.setAnswer(dto.getAnswer());
             entity.setPosition(i);
-
-            flashcardRepository.save(entity);
+            entity.setFlashcardSet(set);  // Set parent reference
+            
+            set.getFlashcards().add(entity);  // Add to parent's collection
+            
+            System.out.println("Added flashcard " + i + ": " + dto.getQuestion().substring(0, Math.min(50, dto.getQuestion().length())));
         }
+        
+        System.out.println("Total flashcards in set: " + set.getFlashcards().size());
+        
+        // Save the set with cascade - will automatically save all flashcards
+        FlashcardSet savedSet = flashcardSetRepository.save(set);
+        
+        System.out.println("FlashcardSet saved with ID: " + savedSet.getId());
+        System.out.println("Saved set has " + savedSet.getFlashcards().size() + " flashcards");
+        System.out.println("=== END SAVING FLASHCARDS ===");
     }
 
     //Prompt building + parsing

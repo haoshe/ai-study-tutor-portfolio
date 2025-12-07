@@ -69,6 +69,11 @@ public class FlashcardController {
             throw new IllegalArgumentException("Study material cannot be empty");
         }
         
+        // Check if study material is too large (over 2 million characters ~ 500k tokens)
+        if (request.getStudyMaterial().length() > 2_000_000) {
+            throw new IllegalArgumentException("Study material is too large. Maximum 2 million characters allowed.");
+        }
+        
         // Extract user from authenticated security context
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         User user = userRepository.findByUsername(userDetails.getUsername())

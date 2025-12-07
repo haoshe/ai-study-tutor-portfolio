@@ -114,9 +114,19 @@ npm install
 
 ### Step 4: Start the Frontend Server
 
+**Option A: Using the startup script
+```bash
+./start-frontend.sh
+```
+
+**Option B: Direct command**
+```bash
 npm start
+```
 
 * Wait for "Compiled successfully!"
+* **Note:** You may see many "EMFILE: too many open files" warnings - **this is normal and can be ignored**
+* The app works despite these warnings; they only affect hot-reload speed
 * Local: [http://localhost:3000](http://localhost:3000)
 * Keep terminal open
 
@@ -154,8 +164,9 @@ Method 2: Replace 8080 with 3000 in backend URL → paste in browser
 1. "Cannot find module" → npm not installed
 2. "Port 3000 in use" → Stop other instances or pkill -f node
 3. "Invalid Host Header" → Ensure .env contains DANGEROUSLY_DISABLE_HOST_CHECK=true
-4. Buttons fail → Backend not running
-5. Blank page/errors → Stop frontend, run npm start again
+4. **"EMFILE: too many open files"** → Already fixed! The .env file includes CHOKIDAR_USEPOLLING=true
+5. Buttons fail → Backend not running
+6. Blank page/errors → Stop frontend, run npm start again
 
 ---
 

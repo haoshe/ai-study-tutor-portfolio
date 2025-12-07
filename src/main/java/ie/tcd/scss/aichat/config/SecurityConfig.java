@@ -11,8 +11,9 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import java.util.*;
 import ie.tcd.scss.aichat.filter.JwtAuthenticationFilter;
+
+import java.util.Arrays;
 
 /**
  * Security configuration for the AI Chat application.
@@ -28,8 +29,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))  // Enable CORS
             .csrf(csrf -> csrf.disable())  // Disable CSRF for stateless JWT API
-            .cors(cors -> cors.configurationSource(corsConfigurationSource())) 
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))  // No sessions - use JWT tokens
             .authorizeHttpRequests(auth -> auth
@@ -42,18 +43,31 @@ public class SecurityConfig {
         
         return http.build();
     }
-      @Bean
+    
+    @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("https://3000--main--csu33012-2526-project23--audejait.coder.scss.tcd.ie"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        
+        // Allow requests from local frontend and Coder frontend
+        configuration.setAllowedOrigins(Arrays.asList(
+            "http://localhost:3000"                                            // Local development
+        ));
+        
+        // Allow common HTTP methods
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        
+        // Allow all headers
         configuration.setAllowedHeaders(Arrays.asList("*"));
+        
+        // Allow credentials (cookies, authorization headers)
         configuration.setAllowCredentials(true);
         
+        // Cache preflight response for 1 hour
+        configuration.setMaxAge(3600L);
+        
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/api/**", configuration);
+        source.registerCorsConfiguration("/**", configuration);
+        
         return source;
     }
-    
-
 }

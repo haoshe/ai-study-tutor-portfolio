@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './StudyAssistant.css';
 
-const API_BASE_URL = '';//'https://8080--main--csu33012-2526-project23--audejait.coder.scss.tcd.ie';
+// Use environment variable for API URL, fallback to proxy (empty string) for local development
+const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
 function StudyAssistant({ userId }) {
   // ============ SOURCES PANEL STATE ============
@@ -34,7 +35,6 @@ function StudyAssistant({ userId }) {
   const [error, setError] = useState('');
   const [dragActive, setDragActive] = useState(false);
   const [textInput, setTextInput] = useState('');
-
 
   // ============ REFS ============
   const fileInputRef = useRef(null);
@@ -112,7 +112,6 @@ function StudyAssistant({ userId }) {
       } catch (err) {
         setError(`Failed to upload ${file.name}: ${err.message}`);
       }
-      
     }
 
     setUploadingFile(false);
@@ -156,43 +155,42 @@ function StudyAssistant({ userId }) {
   };
 
   const addTextSource = () => {
-  if (!textInput.trim()) return;
+    if (!textInput.trim()) return;
 
-  const newSource = {
-    id: Date.now() + Math.random(),
-    name: "Text Source",
-    type: "text",
-    content: textInput,
-    uploadedAt: new Date()
+    const newSource = {
+      id: Date.now() + Math.random(),
+      name: "Text Source",
+      type: "text",
+      content: textInput,
+      uploadedAt: new Date()
+    };
+
+    setSources(prev => [...prev, newSource]);
+    setSelectedSources(prev => new Set([...prev, newSource.id]));
+    setTextInput('');
   };
 
-  setSources(prev => [...prev, newSource]);
-  setSelectedSources(prev => new Set([...prev, newSource.id]));
-  setTextInput('');
-};
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
 
-    const handleDrag = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-
-      if (e.type === "dragenter" || e.type === "dragover") {
-        setDragActive(true);
-      } else if (e.type === "dragleave") {
-        setDragActive(false);
-      }
-    };
-
-    const handleDrop = async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
       setDragActive(false);
+    }
+  };
 
-      const files = e.dataTransfer.files;
-      if (!files.length) return;
+  const handleDrop = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
 
-      // Reuse your existing file upload handler
-      await handleFileUpload({ target: { files } });
-    };
+    const files = e.dataTransfer.files;
+    if (!files.length) return;
+
+    await handleFileUpload({ target: { files } });
+  };
 
   // ============ FLASHCARD FUNCTIONS ============
   const generateFlashcards = async () => {
@@ -202,7 +200,6 @@ function StudyAssistant({ userId }) {
       return;
     }
 
-    // Switch to flashcards tab immediately and show loading there
     setActiveStudioTab('flashcards');
     setLoading(prev => ({ ...prev, flashcards: true }));
     setError('');
@@ -210,8 +207,6 @@ function StudyAssistant({ userId }) {
     setFlippedCards({});
 
     try {
-      console.log('Attempting to fetch:', `${API_BASE_URL}/api/flashcards/generate`);
-console.log('Auth headers:', getAuthHeaders());
       const response = await fetch(`${API_BASE_URL}/api/flashcards/generate`, {
         method: 'POST',
         headers: {
@@ -233,7 +228,18 @@ console.log('Auth headers:', getAuthHeaders());
         return;
       }
 
-      if (!response.ok) throw new Error('Failed to generate flashcards');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.message || errorData.error || 'Unknown error';
+        
+        if (response.status === 413 || errorMessage.includes('too large')) {
+          throw new Error('File is too large. Maximum 50MB or 2 million characters allowed.');
+        } else if (response.status === 500) {
+          throw new Error(`Flashcards failed to generate. ${errorMessage}`);
+        } else {
+          throw new Error(`Flashcards failed to generate (${response.status}). ${errorMessage}`);
+        }
+      }
 
       const data = await response.json();
       const flashcardsData = data.flashcards || data.data || data;
@@ -274,6 +280,9 @@ console.log('Auth headers:', getAuthHeaders());
   };
 
   const deleteFlashcardSet = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this flashcard set?')) {
+      return;
+    }
     try {
       const response = await fetch(`${API_BASE_URL}/api/flashcards/${id}`, {
         method: 'DELETE',
@@ -305,7 +314,6 @@ console.log('Auth headers:', getAuthHeaders());
       return;
     }
 
-    // Switch to quiz tab immediately and show loading there
     setActiveStudioTab('quiz');
     setLoading(prev => ({ ...prev, quiz: true }));
     setError('');
@@ -336,7 +344,18 @@ console.log('Auth headers:', getAuthHeaders());
         return;
       }
 
-      if (!response.ok) throw new Error('Failed to generate quiz');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.message || errorData.error || 'Unknown error';
+        
+        if (response.status === 413 || errorMessage.includes('too large')) {
+          throw new Error('File is too large. Maximum 50MB or 2 million characters allowed.');
+        } else if (response.status === 500) {
+          throw new Error(`Quiz failed to generate. ${errorMessage}`);
+        } else {
+          throw new Error(`Quiz failed to generate (${response.status}). ${errorMessage}`);
+        }
+      }
 
       const data = await response.json();
       if (Array.isArray(data)) {
@@ -365,12 +384,25 @@ console.log('Auth headers:', getAuthHeaders());
   };
 
   const loadQuizSet = (set) => {
-    const questions = set.questions.map(q => ({
-      question: q.question,
-      options: [q.optionA, q.optionB, q.optionC, q.optionD],
-      correctAnswer: q.correctAnswer,
-      explanation: q.explanation
-    }));
+    const questions = set.questions.map(q => {
+      // Convert letter answer (A/B/C/D) to index (0/1/2/3)
+      // Handle both formats: letter from database, or index from fresh generation
+      let correctAnswerIndex = q.correctAnswer;
+      if (typeof q.correctAnswer === 'string') {
+        correctAnswerIndex = ['A', 'B', 'C', 'D'].indexOf(q.correctAnswer.toUpperCase());
+        // If not found (invalid letter), default to -1 which won't match anything
+        if (correctAnswerIndex === -1) {
+          console.warn(`Invalid correctAnswer format: ${q.correctAnswer}`);
+        }
+      }
+      
+      return {
+        question: q.question,
+        options: [q.optionA, q.optionB, q.optionC, q.optionD],
+        correctAnswer: correctAnswerIndex,
+        explanation: q.explanation
+      };
+    });
     setQuizzes(questions);
     setUserAnswers({});
     setQuizSubmitted(false);
@@ -378,6 +410,9 @@ console.log('Auth headers:', getAuthHeaders());
   };
 
   const deleteQuizSet = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this quiz set?')) {
+      return;
+    }
     try {
       const response = await fetch(`${API_BASE_URL}/api/quiz/${id}`, {
         method: 'DELETE',
@@ -392,7 +427,7 @@ console.log('Auth headers:', getAuthHeaders());
   };
 
   const handleAnswerSelect = (questionIndex, optionIndex) => {
-    if (quizSubmitted) return; // Don't allow changes after submission
+    if (quizSubmitted) return;
     setUserAnswers(prev => ({ ...prev, [questionIndex]: optionIndex }));
   };
 
@@ -429,7 +464,6 @@ console.log('Auth headers:', getAuthHeaders());
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsStreaming(true);
 
-    // Add context from selected sources
     const sourceContext = getSelectedContent();
     const contextPrefix = sourceContext
       ? `Context from study materials:\n${sourceContext.substring(0, 3000)}...\n\nUser question: `
@@ -549,7 +583,7 @@ console.log('Auth headers:', getAuthHeaders());
                   />
                 </div>
                 <div className="source-icon">
-                  {source.type === 'pdf' ? '📄' : '📊'}
+                  {source.type === 'pdf' ? '📄' : source.type === 'text' ? '📝' : '📊'}
                 </div>
                 <div className="source-info">
                   <span className="source-name">{source.name}</span>

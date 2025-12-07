@@ -51,6 +51,11 @@ public class QuizController {
             throw new IllegalArgumentException("Study material is required and cannot be empty");
         }
         
+        // Check if study material is too large (over 2 million characters ~ 500k tokens)
+        if (studyMaterial.length() > 2_000_000) {
+            throw new IllegalArgumentException("Study material is too large. Maximum 2 million characters allowed.");
+        }
+        
         // Support both "count" and "questionCount" for backward compatibility
         Integer questionCount = request.containsKey("count") ? 
             (Integer) request.get("count") : 
