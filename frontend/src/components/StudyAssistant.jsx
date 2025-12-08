@@ -1,61 +1,157 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './StudyAssistant.css';
 
-// Use environment variable for API URL, fallback to proxy (empty string) for local development
 const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
 function StudyAssistant({ userId }) {
-  // ============ SOURCES PANEL STATE ============
-  const [sources, setSources] = useState([]);
-  const [selectedSources, setSelectedSources] = useState(new Set());
-  const [uploadingFile, setUploadingFile] = useState(false);
+// ============ SOURCES PANEL STATE ============
+const [sources, setSources] = useState([]);
+const [selectedSources, setSelectedSources] = useState(new Set());
+const [uploadingFile, setUploadingFile] = useState(false);
 
-  // ============ STUDIO PANEL STATE ============
-  const [flashcards, setFlashcards] = useState([]);
-  const [quizzes, setQuizzes] = useState([]);
-  const [flashcardCount, setFlashcardCount] = useState(5);
-  const [quizCount, setQuizCount] = useState(5);
-  const [difficulty, setDifficulty] = useState('MEDIUM');
-  const [activeStudioTab, setActiveStudioTab] = useState('generate');
-  const [flippedCards, setFlippedCards] = useState({});
-  const [userAnswers, setUserAnswers] = useState({});
-  const [quizSubmitted, setQuizSubmitted] = useState(false);
-  const [flashcardHistory, setFlashcardHistory] = useState([]);
-  const [quizHistory, setQuizHistory] = useState([]);
+// ============ STUDIO PANEL STATE ============
+const [flashcards, setFlashcards] = useState([]);
+const [quizzes, setQuizzes] = useState([]);
+const [flashcardCount, setFlashcardCount] = useState(5);
+const [quizCount, setQuizCount] = useState(5);
+const [difficulty, setDifficulty] = useState('MEDIUM');
+const [activeStudioTab, setActiveStudioTab] = useState('generate');
+const [flippedCards, setFlippedCards] = useState({});
+const [userAnswers, setUserAnswers] = useState({});
+const [quizSubmitted, setQuizSubmitted] = useState(false);
+const [flashcardHistory, setFlashcardHistory] = useState([]);
+const [quizHistory, setQuizHistory] = useState([]);
 
-  // ============ CHAT PANEL STATE ============
-  const [messages, setMessages] = useState([]);
-  const [chatInput, setChatInput] = useState('');
-  const [sessionId] = useState(() => `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
-  const [isStreaming, setIsStreaming] = useState(false);
+// ============ CHAT PANEL STATE ============
+const [messages, setMessages] = useState([]);
+const [chatInput, setChatInput] = useState('');
+const [isStreaming, setIsStreaming] = useState(false);
+const [dbSessionId, setDbSessionId] = useState(null);
+const [chatLoaded, setChatLoaded] = useState(false);
 
-  // ============ UI STATE ============
-  const [expandedPanel, setExpandedPanel] = useState(null);
-  const [loading, setLoading] = useState({ flashcards: false, quiz: false, chat: false });
-  const [error, setError] = useState('');
-  const [dragActive, setDragActive] = useState(false);
-  const [textInput, setTextInput] = useState('');
 
-  // ============ REFS ============
-  const fileInputRef = useRef(null);
-  const chatEndRef = useRef(null);
+// ============ UI STATE ============
+const [expandedPanel, setExpandedPanel] = useState(null);
+const [loading, setLoading] = useState({ flashcards: false, quiz: false, chat: false });
+const [error, setError] = useState('');
+const [dragActive, setDragActive] = useState(false);
+const [textInput, setTextInput] = useState('');
 
-  // ============ AUTH HELPER ============
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem('token');
-    return token ? { 'Study-Auth': `Bearer ${token}` } : {};
-  };
+// ============ REFS ============
+const fileInputRef = useRef(null);
+const chatEndRef = useRef(null);
 
-  // ============ AUTO-SCROLL CHAT ============
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+// ============ AUTH ============
+const getAuthHeaders = () => {
+  const token =
+    localStorage.getItem('token') ||
+    sessionStorage.getItem('token');
+  return token ? { 'Study-Auth': `Bearer ${token}` } : {};
+};
 
-  // ============ LOAD HISTORY ON MOUNT ============
-  useEffect(() => {
-    loadFlashcardHistory();
-    loadQuizHistory();
-  }, []);
+// ============ LOAD USER SOURCES FROM BACKEND ============
+const loadUserSources = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/sources/user/${userId}`, {
+      headers: getAuthHeaders()
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      setSources(data);
+
+      // Validate and restore selected IDs
+      const saved = JSON.parse(localStorage.getItem("selectedSources") || "[]");
+      const validIds = saved.filter(id => data.some(src => src.id === id));
+
+      setSelectedSources(new Set(validIds));
+      localStorage.setItem("selectedSources", JSON.stringify(validIds));
+    }
+
+  } catch (err) {
+    console.error("Failed to load sources:", err);
+  }
+};
+
+// ============ AUTO SCROLL ============
+useEffect(() => {
+  chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+}, [messages]);
+
+// ============ INITIAL LOAD ============
+useEffect(() => {
+  loadFlashcardHistory();
+  loadQuizHistory();
+  loadUserSources();
+
+  const savedSelections = JSON.parse(localStorage.getItem("selectedSources") || "[]");
+  setSelectedSources(new Set(savedSelections));
+}, []);
+
+// ============ INIT CHAT SESSION & LOAD HISTORY ============
+useEffect(() => {
+  async function initChat() {
+    if (!userId) return;
+    
+    try {
+      // 1. Load existing sessions for this user
+      const sessionsRes = await fetch(
+        `${API_BASE_URL}/api/chat/history/sessions/${userId}`,
+        { headers: getAuthHeaders() }
+      );
+
+      let sessions = [];
+      if (sessionsRes.ok) {
+        sessions = await sessionsRes.json();
+        console.log("Loaded sessions:", sessions);
+      }
+
+      let sessionIdToUse;
+
+      if (sessions.length > 0) {
+        // 2. Use the LAST session (continue conversation)
+        const latest = sessions[sessions.length - 1];
+        sessionIdToUse = latest.id;
+        console.log("Using existing session:", sessionIdToUse);
+      } else {
+        // 3. No sessions yet → create a new one
+        const createRes = await fetch(
+          `${API_BASE_URL}/api/chat/history/session?userId=${userId}`,
+          { method: "POST", headers: getAuthHeaders() }
+        );
+        const created = await createRes.json();
+        sessionIdToUse = created.id;
+        console.log("Created new session:", sessionIdToUse);
+      }
+
+      setDbSessionId(sessionIdToUse);
+
+      // 4. Load messages for this session
+      const msgRes = await fetch(
+        `${API_BASE_URL}/api/chat/history/messages/${sessionIdToUse}`,
+        { headers: getAuthHeaders() }
+      );
+
+      if (msgRes.ok) {
+        const msgs = await msgRes.json();
+        setMessages(
+          msgs.map(m => ({
+            role: m.role,
+            content: m.content
+          }))
+        );
+      }
+      setChatLoaded(true);   
+
+
+    } catch (err) {
+      console.error("Failed to initialize chat history:", err);
+    }
+  }
+
+  initChat();
+}, [userId]);
+
 
   // ============ SOURCE MANAGEMENT ============
   const handleFileUpload = async (event) => {
@@ -87,28 +183,20 @@ function StudyAssistant({ userId }) {
         const formData = new FormData();
         formData.append('file', file);
 
-        const response = await fetch(`${API_BASE_URL}/api/slides/upload`, {
-          method: 'POST',
-          body: formData
-        });
+        // ★ PATCH — include userId in upload URL
+        const response = await fetch(
+          `${API_BASE_URL}/api/slides/upload?userId=${userId}`,
+          { method: 'POST', body: formData }
+        );
 
-        if (!response.ok) {
-          throw new Error(`Upload failed for ${file.name}`);
-        }
+        if (!response.ok) throw new Error(`Upload failed for ${file.name}`);
 
+        // ★ PATCH — the backend now returns a saved Sources object
         const data = await response.json();
-        const extractedText = data.sections?.map(s => s.content).join('\n\n') || '';
 
-        const newSource = {
-          id: Date.now() + Math.random(),
-          name: file.name,
-          type: file.type.includes('pdf') ? 'pdf' : 'ppt',
-          content: extractedText,
-          uploadedAt: new Date()
-        };
+        setSources(prev => [...prev, data]);               // ★ PATCH
+        setSelectedSources(prev => new Set([...prev, data.id])); // ★ PATCH
 
-        setSources(prev => [...prev, newSource]);
-        setSelectedSources(prev => new Set([...prev, newSource.id]));
       } catch (err) {
         setError(`Failed to upload ${file.name}: ${err.message}`);
       }
@@ -118,33 +206,60 @@ function StudyAssistant({ userId }) {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const toggleSourceSelection = (sourceId) => {
+    const toggleSourceSelection = (sourceId) => {
     setSelectedSources(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(sourceId)) {
-        newSet.delete(sourceId);
-      } else {
-        newSet.add(sourceId);
-      }
+      if (newSet.has(sourceId)) newSet.delete(sourceId);
+      else newSet.add(sourceId);
+
+      // ★ PATCH — save updated selections
+      localStorage.setItem("selectedSources", JSON.stringify([...newSet]));
+
       return newSet;
     });
   };
 
   const selectAllSources = () => {
-    if (selectedSources.size === sources.length) {
-      setSelectedSources(new Set());
-    } else {
-      setSelectedSources(new Set(sources.map(s => s.id)));
-    }
-  };
+  if (selectedSources.size === sources.length) {
 
-  const deleteSource = (sourceId) => {
-    setSources(prev => prev.filter(s => s.id !== sourceId));
-    setSelectedSources(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(sourceId);
-      return newSet;
-    });
+    //  All were selected → deselect all
+    const emptySet = new Set();
+    setSelectedSources(emptySet);
+
+    // ★ PATCH — save to localStorage
+    localStorage.setItem("selectedSources", JSON.stringify([...emptySet]));
+
+  } else {
+
+    // Not all selected → select all
+    const allIds = new Set(sources.map(s => s.id));
+    setSelectedSources(allIds);
+
+    // ★ PATCH — save to localStorage
+    localStorage.setItem("selectedSources", JSON.stringify([...allIds]));
+  }
+};
+
+  // ★ PATCH — delete source from backend
+  const deleteSource = async (sourceId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/sources/${sourceId}`, {
+        method: "DELETE",
+        headers: getAuthHeaders()
+      });
+
+      if (!response.ok) throw new Error("Failed to delete source");
+
+      setSources(prev => prev.filter(s => s.id !== sourceId));
+      setSelectedSources(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(sourceId);
+        return newSet;
+      });
+
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   const getSelectedContent = () => {
@@ -154,41 +269,51 @@ function StudyAssistant({ userId }) {
       .join('\n\n');
   };
 
-  const addTextSource = () => {
+  // ★ PATCH — text source now saved to backend
+  const addTextSource = async () => {
     if (!textInput.trim()) return;
 
-    const newSource = {
-      id: Date.now() + Math.random(),
-      name: "Text Source",
-      type: "text",
-      content: textInput,
-      uploadedAt: new Date()
-    };
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/sources`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders()
+        },
+        body: JSON.stringify({
+          userId,
+          name: "Text Source",
+          type: "text",
+          content: textInput
+        })
+      });
 
-    setSources(prev => [...prev, newSource]);
-    setSelectedSources(prev => new Set([...prev, newSource.id]));
-    setTextInput('');
+      if (!response.ok) throw new Error("Failed to save text source");
+
+      const saved = await response.json();
+
+      setSources(prev => [...prev, saved]);
+      setSelectedSources(prev => new Set([...prev, saved.id]));
+      setTextInput("");
+
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   const handleDrag = (e) => {
     e.preventDefault();
     e.stopPropagation();
-
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
+    if (e.type === "dragenter" || e.type === "dragover") setDragActive(true);
+    else if (e.type === "dragleave") setDragActive(false);
   };
 
   const handleDrop = async (e) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-
     const files = e.dataTransfer.files;
     if (!files.length) return;
-
     await handleFileUpload({ target: { files } });
   };
 
@@ -268,6 +393,21 @@ function StudyAssistant({ userId }) {
       console.error('Failed to load flashcard history:', err);
     }
   };
+
+  const loadSources = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/sources/user/${userId}`, {
+        headers: getAuthHeaders()
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setSources(data);
+      }
+    } catch (err) {
+      console.error("Failed to load sources:", err);
+    }
+  };
+
 
   const loadFlashcardSet = (set) => {
     const cards = set.flashcards.map(f => ({
@@ -455,55 +595,119 @@ function StudyAssistant({ userId }) {
     setQuizSubmitted(false);
   };
 
-  // ============ CHAT FUNCTIONS ============
-  const sendMessage = async () => {
-    if (!chatInput.trim() || isStreaming) return;
+ // ============ CHAT FUNCTIONS ============
+const sendMessage = async () => {
+  if (!chatInput.trim() || isStreaming) return;
+  if (!dbSessionId) {
+    console.warn("Chat session not ready yet.");
+    return;
+  }
 
-    const userMessage = chatInput.trim();
-    setChatInput('');
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
-    setIsStreaming(true);
+  const userMessage = chatInput.trim();
+  setChatInput('');
+  setIsStreaming(true);
 
+  // Optimistically add user message to UI
+  setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+
+  try {
+    // 1. SAVE USER MESSAGE TO BACKEND
+    const saveUserRes = await fetch(
+      `${API_BASE_URL}/api/chat/history/message?sessionId=${dbSessionId}&role=user&content=${encodeURIComponent(userMessage)}`,
+      { method: "POST", headers: getAuthHeaders() }
+    );
+    
+    if (!saveUserRes.ok) {
+      console.error("Failed to save user message:", await saveUserRes.text());
+    }
+
+    // 2. Build context for AI (include study materials if selected)
     const sourceContext = getSelectedContent();
     const contextPrefix = sourceContext
       ? `Context from study materials:\n${sourceContext.substring(0, 3000)}...\n\nUser question: `
       : '';
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/chat/conversation`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getAuthHeaders()
-        },
-        body: JSON.stringify({
-          sessionId,
-          message: contextPrefix + userMessage
-        })
-      });
+    // 3. SEND TO AI ENDPOINT
+    console.log("Sending to AI with sessionId:", dbSessionId);
+    const aiRes = await fetch(`${API_BASE_URL}/api/chat/conversation`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify({
+        sessionId: String(dbSessionId),
+        message: contextPrefix + userMessage,
+      }),
+    });
 
-      if (!response.ok) throw new Error('Chat failed');
-
-      const data = await response.json();
-      setMessages(prev => [...prev, { role: 'assistant', content: data.response }]);
-    } catch (err) {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I encountered an error. Please try again.' }]);
-    } finally {
-      setIsStreaming(false);
+    if (!aiRes.ok) {
+      const errorText = await aiRes.text();
+      console.error("AI request failed:", aiRes.status, errorText);
+      throw new Error("Chat AI failed: " + errorText);
     }
-  };
+
+    const aiData = await aiRes.json();
+    console.log("AI response:", aiData);
+    const assistantText = aiData.response;
+
+    if (!assistantText) {
+      console.error("No response text from AI:", aiData);
+      throw new Error("Empty response from AI");
+    }
+
+    // 4. SAVE ASSISTANT MESSAGE TO BACKEND
+    const saveAssistantRes = await fetch(
+      `${API_BASE_URL}/api/chat/history/message?sessionId=${dbSessionId}&role=assistant&content=${encodeURIComponent(assistantText)}`,
+      { method: "POST", headers: getAuthHeaders() }
+    );
+
+    if (!saveAssistantRes.ok) {
+      console.error("Failed to save assistant message:", await saveAssistantRes.text());
+    }
+
+    // 5. ADD ASSISTANT MESSAGE TO UI
+    setMessages(prev => [...prev, { role: 'assistant', content: assistantText }]);
+
+  } catch (err) {
+    console.error("Chat error:", err);
+    setError("Failed to send message: " + err.message);
+    // Add error message to chat so user knows something went wrong
+    setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I encountered an error. Please try again." }]);
+  } finally {
+    setIsStreaming(false);
+  }
+};
+
 
   const clearChat = async () => {
     try {
-      await fetch(`${API_BASE_URL}/api/chat/conversation/${sessionId}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders()
-      });
+      if (dbSessionId) {
+        // 1. Delete old session on backend
+        await fetch(`${API_BASE_URL}/api/chat/history/session/${dbSessionId}`, {
+          method: "DELETE",
+          headers: getAuthHeaders(),
+        });
+      }
+
+      // 2. Create a brand new session
+      const createRes = await fetch(
+        `${API_BASE_URL}/api/chat/history/session?userId=${userId}`,
+        { method: "POST", headers: getAuthHeaders() }
+      );
+
+      const newSession = await createRes.json();
+      setDbSessionId(newSession.id);
+
+      // 3. Clear messages in UI
       setMessages([]);
+
     } catch (err) {
-      console.error('Failed to clear chat:', err);
+      console.error("Failed to clear chat:", err);
     }
   };
+
+
 
   // ============ PANEL EXPANSION ============
   const togglePanelExpand = (panel) => {
@@ -913,7 +1117,7 @@ function StudyAssistant({ userId }) {
 
         <div className="panel-content chat-content">
           <div className="messages-container">
-            {messages.length === 0 && (
+            {chatLoaded && messages.length === 0 && (
               <div className="chat-welcome">
                 <div className="welcome-icon">💬</div>
                 <h3>AI Study Assistant</h3>
@@ -968,7 +1172,8 @@ function StudyAssistant({ userId }) {
                 onChange={(e) => setChatInput(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
                 placeholder="Start typing..."
-                disabled={isStreaming}
+                disabled={!dbSessionId || isStreaming}
+
               />
               <button className="send-btn" onClick={sendMessage} disabled={isStreaming || !chatInput.trim()}>
                 ➤

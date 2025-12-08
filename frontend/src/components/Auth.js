@@ -64,12 +64,23 @@ function Auth({ onLoginSuccess }) {
         throw new Error(data.message || 'Authentication failed');
       }
 
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify({
+     if (formData.rememberMe) {
+    // Remember Me → persistent login
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('user', JSON.stringify({
         id: data.id,
         username: data.username,
         email: data.email
-      }));
+    }));
+} else {
+    // No Remember Me → session-only login
+    sessionStorage.setItem('token', data.token);
+    sessionStorage.setItem('user', JSON.stringify({
+        id: data.id,
+        username: data.username,
+        email: data.email
+    }));
+}
 
       onLoginSuccess(data);
 
