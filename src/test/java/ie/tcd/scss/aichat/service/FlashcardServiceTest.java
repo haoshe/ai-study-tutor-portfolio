@@ -2,7 +2,6 @@ package ie.tcd.scss.aichat.service;
 
 import ie.tcd.scss.aichat.dto.Flashcard;
 import ie.tcd.scss.aichat.model.User;
-import ie.tcd.scss.aichat.repository.FlashcardRepository;
 import ie.tcd.scss.aichat.repository.FlashcardSetRepository;
 import ie.tcd.scss.aichat.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,9 +34,6 @@ class FlashcardServiceTest {
     private ChatModel chatModel;
     
     @Mock
-    private FlashcardRepository flashcardRepository;
-    
-    @Mock
     private FlashcardSetRepository flashcardSetRepository;
     
     @Mock
@@ -47,7 +43,7 @@ class FlashcardServiceTest {
     
     @BeforeEach
     void setUp() {
-        flashcardService = new FlashcardService(chatModel, flashcardRepository, flashcardSetRepository, userRepository);
+        flashcardService = new FlashcardService(chatModel, flashcardSetRepository, userRepository);
         
         // Mock user repository to return a test user
         User testUser = new User();
@@ -57,7 +53,6 @@ class FlashcardServiceTest {
         
         // Mock repository saves
         lenient().when(flashcardSetRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        lenient().when(flashcardRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     }
     
     @Test

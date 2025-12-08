@@ -1,4 +1,4 @@
-# Reflections
+# Reflections/ Developer Diary
 
 ## Week 1-2: 19 Oct - 1 Nov.
 - The first two weeks of the project had a minor impact on the whole process.
@@ -62,4 +62,3 @@ Although weekly scrum meetings continued, project work became more seamless. No 
 - Fiachra and Abdul collaborated:
   - Created a file upload system integrated with the frontend
   - Added additional systems, including a login connected to the database
-

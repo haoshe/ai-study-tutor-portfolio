@@ -11,6 +11,55 @@ function Auth({ onLoginSuccess }) {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState({ score: 0, feedback: [] });
+
+  // Industry-standard password validation
+  const validatePassword = (password) => {
+    const feedback = [];
+    let score = 0;
+
+    if (password.length >= 8) {
+      score++;
+    } else {
+      feedback.push('At least 8 characters');
+    }
+
+    if (password.length >= 12) {
+      score++;
+    }
+
+    if (/[A-Z]/.test(password)) {
+      score++;
+    } else {
+      feedback.push('One uppercase letter');
+    }
+
+    if (/[a-z]/.test(password)) {
+      score++;
+    } else {
+      feedback.push('One lowercase letter');
+    }
+
+    if (/[0-9]/.test(password)) {
+      score++;
+    } else {
+      feedback.push('One number');
+    }
+
+    if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+      score++;
+    } else {
+      feedback.push('One special character (!@#$%^&*...)');
+    }
+
+    return { score, feedback, isValid: feedback.length === 0 };
+  };
+
+  const getStrengthLabel = (score) => {
+    if (score <= 2) return { label: 'Weak', className: 'weak' };
+    if (score <= 4) return { label: 'Medium', className: 'medium' };
+    return { label: 'Strong', className: 'strong' };
+  };
 
   const handleChange = (e) => {
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
@@ -19,6 +68,11 @@ function Auth({ onLoginSuccess }) {
       [e.target.name]: value
     });
     setError('');
+
+    // Update password strength indicator for registration
+    if (e.target.name === 'password' && !isLogin) {
+      setPasswordStrength(validatePassword(value));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -38,10 +92,14 @@ function Auth({ onLoginSuccess }) {
       return;
     }
 
-    if (!isLogin && formData.password.length < 6) {
-      setError('Password must be at least 6 characters');
-      setLoading(false);
-      return;
+    // Industry-standard password validation for registration
+    if (!isLogin) {
+      const validation = validatePassword(formData.password);
+      if (!validation.isValid) {
+        setError(`Password requirements: ${validation.feedback.join(', ')}`);
+        setLoading(false);
+        return;
+      }
     }
 
     try {
@@ -64,12 +122,21 @@ function Auth({ onLoginSuccess }) {
         throw new Error(data.message || 'Authentication failed');
       }
 
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify({
-        id: data.id,
-        username: data.username,
-        email: data.email
-      }));
+      if (formData.rememberMe) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify({
+          id: data.id,
+          username: data.username,
+          email: data.email
+        }));
+      } else {
+        sessionStorage.setItem('token', data.token);
+        sessionStorage.setItem('user', JSON.stringify({
+          id: data.id,
+          username: data.username,
+          email: data.email
+        }));
+      }
 
       onLoginSuccess(data);
 
@@ -83,8 +150,11 @@ function Auth({ onLoginSuccess }) {
   const toggleMode = () => {
     setIsLogin(!isLogin);
     setError('');
+    setPasswordStrength({ score: 0, feedback: [] });
     setFormData({ username: '', email: '', password: '', rememberMe: false });
   };
+
+  const strengthInfo = getStrengthLabel(passwordStrength.score);
 
   return (
     <div className="auth-container">
@@ -147,7 +217,46 @@ function Auth({ onLoginSuccess }) {
               autoComplete={isLogin ? "current-password" : "new-password"}
             />
             {!isLogin && (
-              <small className="form-hint">Minimum 6 characters</small>
+              <>
+                <div className="password-requirements">
+                  <p className="requirements-title">Password must contain:</p>
+                  <ul className="requirements-list">
+                    <li className={formData.password.length >= 8 ? 'met' : ''}>
+                      <span className="req-icon">{formData.password.length >= 8 ? '✓' : '○'}</span>
+                      At least 8 characters
+                    </li>
+                    <li className={/[A-Z]/.test(formData.password) ? 'met' : ''}>
+                      <span className="req-icon">{/[A-Z]/.test(formData.password) ? '✓' : '○'}</span>
+                      One uppercase letter
+                    </li>
+                    <li className={/[a-z]/.test(formData.password) ? 'met' : ''}>
+                      <span className="req-icon">{/[a-z]/.test(formData.password) ? '✓' : '○'}</span>
+                      One lowercase letter
+                    </li>
+                    <li className={/[0-9]/.test(formData.password) ? 'met' : ''}>
+                      <span className="req-icon">{/[0-9]/.test(formData.password) ? '✓' : '○'}</span>
+                      One number
+                    </li>
+                    <li className={/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(formData.password) ? 'met' : ''}>
+                      <span className="req-icon">{/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(formData.password) ? '✓' : '○'}</span>
+                      One special character
+                    </li>
+                  </ul>
+                </div>
+                {formData.password && (
+                  <div className="password-strength">
+                    <div className="strength-bar">
+                      <div 
+                        className={`strength-fill ${strengthInfo.className}`}
+                        style={{ width: `${(passwordStrength.score / 6) * 100}%` }}
+                      />
+                    </div>
+                    <span className={`strength-label ${strengthInfo.className}`}>
+                      {strengthInfo.label}
+                    </span>
+                  </div>
+                )}
+              </>
             )}
           </div>
 

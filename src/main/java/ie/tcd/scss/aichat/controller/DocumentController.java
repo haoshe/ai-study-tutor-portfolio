@@ -3,27 +3,33 @@ package ie.tcd.scss.aichat.controller;
 import java.io.IOException;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import java.util.stream.Collectors;
+
 
 import ie.tcd.scss.aichat.dto.SlideDocument;
+import ie.tcd.scss.aichat.model.Sources;
 import ie.tcd.scss.aichat.service.DocumentParsingService;
+import ie.tcd.scss.aichat.service.SourcesService;
 
 @RestController
 @RequestMapping("/api/slides")
 public class DocumentController {
 
     private final DocumentParsingService documentParsingService;
+    private final SourcesService sourcesService;
 
-    public DocumentController(DocumentParsingService documentParsingService) {
+    public DocumentController(DocumentParsingService documentParsingService, SourcesService sourcesService) {
         this.documentParsingService = documentParsingService;
+        this.sourcesService = sourcesService;
     }
 
     @PostMapping("/upload")
-    public ResponseEntity<SlideDocument> uploadFile(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<Sources> uploadFile(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("userId") Long userId) {
+
         try {
             if (file.isEmpty()) {
                 return ResponseEntity.badRequest().build();
@@ -33,8 +39,27 @@ public class DocumentController {
                 return ResponseEntity.badRequest().build();
             }
 
-            SlideDocument document = documentParsingService.processDocument(file);
-            return ResponseEntity.ok(document);
+            SlideDocument parsed = documentParsingService.processDocument(file);
+
+            Sources src = new Sources();
+            src.setUserId(userId);
+            src.setName(file.getOriginalFilename());
+            String type = file.getOriginalFilename().toLowerCase().endsWith(".pdf")
+                ? "pdf"
+                : "ppt";
+            src.setType(type);
+
+           src.setContent(
+                parsed.getSections()
+                    .stream()
+                    .map(section -> section.getContent())
+                    .reduce("", (a, b) -> a + "\n\n" + b)
+                    );
+
+            Sources saved = sourcesService.save(src);
+
+            return ResponseEntity.ok(saved);
+
         } catch (IOException e) {
             return ResponseEntity.internalServerError().build();
         }
