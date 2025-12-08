@@ -37,8 +37,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private UserDetailsService userDetailsService;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, 
-                                    HttpServletResponse response, 
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
         logger.info("=== JWT Filter Debug ===");
@@ -75,16 +75,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 if (jwtUtil.validateToken(jwtToken, userDetails.getUsername())) {
                     
                     // Create authentication token
-                    UsernamePasswordAuthenticationToken authenticationToken = 
+                    UsernamePasswordAuthenticationToken authenticationToken =
                         new UsernamePasswordAuthenticationToken(
-                            userDetails, 
-                            null, 
+                            userDetails,
+                            null,
                             userDetails.getAuthorities()
                         );
-                    
-                    authenticationToken.setDetails(
-                        new WebAuthenticationDetailsSource().buildDetails(request)
-                    );
+
+                    // Set details to null to avoid Coder proxy interference
+                    authenticationToken.setDetails(null);
 
                     // Set authentication in Spring Security context
                     SecurityContextHolder.getContext().setAuthentication(authenticationToken);
