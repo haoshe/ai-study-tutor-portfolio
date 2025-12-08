@@ -9,9 +9,6 @@ CREATE USER IF NOT EXISTS 'aichat_user'@'localhost' IDENTIFIED BY 'aichat_pass';
 GRANT ALL PRIVILEGES ON aichat_db.* TO 'aichat_user'@'localhost';
 FLUSH PRIVILEGES;
 
-USE aichat_db;
-ALTER TABLE chat_message MODIFY content LONGTEXT;
-
 SELECT 'Database setup complete!' AS '';
 EOF
 
