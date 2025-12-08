@@ -48,8 +48,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String jwtToken = null;
 
         // Check if header contains Bearer token
-        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-            jwtToken = authorizationHeader.substring(7); // Remove "Bearer " prefix
+        if (authorizationHeader != null) {
+            jwtToken = authorizationHeader;
             
             try {
                 username = jwtUtil.extractUsername(jwtToken);
