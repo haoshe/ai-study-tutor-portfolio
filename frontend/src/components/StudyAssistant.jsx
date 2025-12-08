@@ -43,7 +43,7 @@ function StudyAssistant({ userId }) {
   // ============ AUTH HELPER ============
   const getAuthHeaders = () => {
     const token = localStorage.getItem('token');
-    return token ? { 'Authorization': `Bearer ${token}` } : {};
+    return token ? { 'Study-Auth': `Bearer ${token}` } : {};
   };
 
   // ============ AUTO-SCROLL CHAT ============
