@@ -158,6 +158,13 @@ useEffect(() => {
     const files = event.target.files;
     if (!files.length) return;
 
+    // Check file limit
+    const MAX_FILES = 30;
+    if (sources.length + files.length > MAX_FILES) {
+       setError(`Maximum ${MAX_FILES} files allowed. You have ${sources.length} files.`);
+      return;
+    }
+
     const MAX_FILE_SIZE = 10 * 1024 * 1024;
     const validTypes = [
       'application/pdf',
