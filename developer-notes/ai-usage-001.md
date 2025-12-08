@@ -67,12 +67,15 @@ Understand reasoning before implementing
 Apply learned patterns independently
 
 ##Main Prompts and Use Cases
+
 Debugging Session Example
 Context: Compilation errors after adding Remember Me feature
+
 Initial Prompt:
 help me figure out why this code is failing
 [Error logs included]
 Follow-up Prompts:
+
 "so these tests were working earlier, with earlier features, but now are failing, any ideas on why?"
 "okay in login request there was a change in the constructor, there is a new addition, rememberMe, and i believe if i just add a T or F value it will mess up the remember me process"
 Outcome:
@@ -81,28 +84,37 @@ Understood backward compatibility concerns
 Implemented appropriate default values
 Fixed 8 compilation errors and 2 Mockito errors
 Test Generation Example
+
 Context: Need comprehensive testing for Remember Me functionality
 Main Prompt:
 now i want to create some tests to check that the functionality of the rememberMe feature is operational. I want you to write tests with expected return messages that show a response for when the correct response is to have a true value, when it is to have a false value, and when true is expected but false received, and when false is expected but true is received
+
 [Complete implementation code included]
 Outcome:
 Generated 6 comprehensive test methods
+
 Covered positive and negative scenarios
 Included edge cases and parameter verification
 All tests passed on first run (100% success rate)
+
 Git Workflow Guidance
 Context: Merge conflicts and branch management issues
-Key Prompts:
-"How do I check for merge conflicts before merging?"
-"The merge didn't include my latest changes, why?"
-"Help me resolve these GitLab inline conflicts"
+
+
+##Key Prompts:
+1. "How do I check for merge conflicts before merging?"
+2. "The merge didn't include my latest changes, why?"
+3. "Help me resolve these GitLab inline conflicts"
+
 Outcome:
+
 Learned proper git workflow commands
 Understood merge-base and ancestry tracking
 Successfully resolved conflicts in GitLab UI
 Created reusable git workflow documentation
 System Configuration
 Context: React development server failing to start
+
 Main Prompt:
 Error: EMFILE: too many open files, watch
 [System context and error details]
@@ -215,16 +227,20 @@ Demonstrates understanding
 Implementation: At end of each AI session, request summary documentation.
 
 ##Quantitative Impact
+
 [Time Savings]
 1. Debugging: ~1.5-2 hours saved per session
 2. Test Creation: ~1.75 hours saved
 3. Documentation: ~5-6 hours saved
 4. Total Estimated Savings: ~8.75 hours per major feature
+
 [Code Quality Metrics]
 1. Test Pass Rate: 100% (105/105 tests passing)
 2. Compilation Errors Resolved: 10
 3. Test Coverage: 6 new tests for Remember Me feature
 4. Documentation Generated: ~10,000 words
+
+
 ##Learning Outcomes
 [Concepts Mastered:]
 Mockito stubbing vs verification patterns
@@ -247,7 +263,7 @@ Much slower
 May find outdated solutions
 Requires more searching and filtering
 Pair Programming with Peer
-[Approach: Work with another student to solve problems]
+2. [Approach: Work with another student to solve problems]
 Estimated Time: 1-2 hours
 
 Pros:
@@ -259,7 +275,9 @@ Cons:
 Requires coordinating schedules
 May both be stuck on same issue
 Limited to peer's knowledge level
-[AI-Assisted (Actual Approach)]
+
+
+3. [AI-Assisted (Actual Approach)]
 Approach: Use Claude for diagnosis and guidance
 Actual Time: ~90 minutes total
 
@@ -269,6 +287,7 @@ Expert-level explanations
 Multiple solution options
 Documentation generation
 
+
 Cons:
 Requires careful verification
 May create dependency
@@ -276,6 +295,7 @@ Learning transfer requires intentional effort
 Conclusion: AI assistance was most time-efficient while still enabling learning when used with verification and understanding protocols.
 
 ##Ethical Considerations and Academic Integrity
+
 Appropriate Use Guidelines Followed
 Transparency: Documenting all AI usage in this report
 Understanding: Ensuring comprehension of all AI-provided solutions
@@ -283,45 +303,33 @@ Independence: Implementing all production code personally
 Decision-Making: Making all technical choices independently
 Verification: Testing and validating all AI suggestions
 Boundaries Maintained
-Used AI For:
+
+[Used AI For:]
 ✅ Debugging assistance
+
 ✅ Test generation with review
+
 ✅ Documentation creation
+
 ✅ Concept explanation
+
 ✅ Best practice guidance
-Did NOT Use AI For:
+
+[Did NOT Use AI For:]
 
 ❌ Algorithmic problem-solving
+
 ❌ Design decisions
+
 ❌ Architecture choices
+
 ❌ Blind copy-paste of solutions
-Alignment with Industry Practice
+
+[Alignment with Industry Practice]
 Observation: Professional developers routinely use AI assistants (GitHub Copilot, ChatGPT, etc.)
 Skill Development: Learning to use AI tools effectively is a valuable professional competency.
 Academic Value: This experience mirrors real-world development practices while maintaining learning objectives.
 
-##Future Improvements
-
-1. Create AI prompt templates for common tasks
-2. Develop project style guide to share with AI in initial prompts
-3. Set up context-gathering checklist before starting AI sessions
-4. Implement peer review of AI-generated code
-5. Track AI usage time more precisely for better metrics
-[For Team Adoption]
-1. Document team AI usage guidelines
-2. Share successful prompt patterns
-3. Create repository of useful AI interactions
-4. Establish code review process for AI-generated content
-5. Define clear boundaries for appropriate AI use
-
-##Conclusion
-The strategic use of Claude AI as a development assistant proved highly valuable for this project, saving approximately 8.75 hours while maintaining code quality and supporting learning objectives. Success required:
-Careful context provision to get accurate responses
-Critical evaluation of all AI suggestions
-Independent implementation and verification
-Active learning from explanations provided
-Transparent documentation of usage
-The experience demonstrated that AI tools, when used thoughtfully, can enhance productivity and learning without compromising academic integrity or skill development. The key is maintaining active engagement with the material rather than passive acceptance of AI-generated solutions.
 
 ##References
 AI Tools Documentation
