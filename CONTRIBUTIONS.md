@@ -7,219 +7,162 @@
 
 ---
 
-## Files I Authored (100% My Work)
+## Overview
 
-### Backend Services
-- `src/main/java/ie/tcd/scss/aichat/service/FlashcardService.java` - 100% authored
-- `src/main/java/ie/tcd/scss/aichat/service/QuizService.java` - 100% authored
-
-### Controllers
-- `src/main/java/ie/tcd/scss/aichat/controller/FlashcardController.java` - 100% authored
-- `src/main/java/ie/tcd/scss/aichat/controller/QuizController.java` - 100% authored
-
-### Configuration
-- `src/main/java/ie/tcd/scss/aichat/config/SecurityConfig.java` - 100% authored
-
-### Tests
-- `src/test/java/ie/tcd/scss/aichat/controller/FlashcardControllerTest.java` - 100% authored
-- `src/test/java/ie/tcd/scss/aichat/controller/QuizControllerTest.java` - 100% authored
-- `src/test/java/ie/tcd/scss/aichat/service/FlashcardServiceTest.java` - 100% authored
-- `src/test/java/ie/tcd/scss/aichat/service/QuizServiceTest.java` - 100% authored
-
-### DTOs
-- `src/main/java/ie/tcd/scss/aichat/dto/FlashcardRequest.java` - 100% authored
-- `src/main/java/ie/tcd/scss/aichat/dto/Flashcard.java` - 100% authored
-- `src/main/java/ie/tcd/scss/aichat/dto/QuizRequest.java` - 100% authored
-- `src/main/java/ie/tcd/scss/aichat/dto/QuizQuestion.java` - 100% authored
+I was responsible for integrating OpenAI's GPT into the study application and building the initial frontend interface. My work focused on solving AI reliability issues through prompt engineering and creating a functional user interface for flashcard and quiz generation.
 
 ---
 
-## Files I Authored/Co-Authored (Frontend)
+## Key Contributions
 
-### React Components
-- `frontend/src/components/StudyAssistant.jsx` - **Co-authored with Fiachra Tobin**
-  - **My contributions:** Initial MVP implementation (Nov 13), History tab feature (Dec 3), warning message integration, streaming support, bug fixes
-  - **Fiachra's contributions:** Three-panel layout redesign, authentication screens, quiz scoring, file upload UI
-  - **Contribution ratio:** 12 commits each to main component
+### 1. AI-Powered Content Generation (Backend)
 
-- `frontend/src/components/StudyAssistant.css` - **Co-authored with Fiachra Tobin**
-  - **My contributions:** Initial styling, History tab styles, tab styling fixes
-  - **Fiachra's contributions:** Three-panel layout styling, responsive design enhancements
+**What I Built:**
+- Flashcard generation service using OpenAI API
+- Quiz generation service with three difficulty levels (Easy, Medium, Hard)
+- REST API controllers for both services
+- Comprehensive test suites (35+ tests, 100% pass rate)
 
-### Application Files
-- `frontend/src/App.js` - Primary author (initial setup)
-- `frontend/src/App.css` - Modified (logout button fix)
-- `frontend/src/index.js` - 100% authored
-- `frontend/src/index.css` - 100% authored
-
-### Configuration & Scripts
-- `frontend/start-frontend.sh` - 100% authored
-- `frontend/.env` - Configuration additions (CHOKIDAR_USEPOLLING, DANGEROUSLY_DISABLE_HOST_CHECK)
-- `frontend/package.json` - Initial setup with proxy configuration
+**Key Files:**
+- `FlashcardService.java` - Core AI integration for flashcard generation
+- `QuizService.java` - Quiz generation with difficulty levels
+- `FlashcardController.java` & `QuizController.java` - REST endpoints
+- Complete test coverage for all services and controllers
 
 ---
 
-## Files I Modified (Collaborative)
+### 2. Solving AI Quality Issues (Prompt Engineering)
 
-### Backend
-- `src/main/resources/application.properties` - Fixed syntax error (line 3)
-- `src/main/java/ie/tcd/scss/aichat/repository/FlashcardSetRepository.java` - Added @Query annotation
-- `src/main/java/ie/tcd/scss/aichat/repository/QuizSetRepository.java` - Added @Query annotation
-- `src/test/java/ie/tcd/scss/aichat/repository/FlashcardSetRepositoryTest.java` - Fixed timing issues
-- `src/test/java/ie/tcd/scss/aichat/repository/QuizSetRepositoryTest.java` - Fixed timing issues
+**Problem 1: Quiz Answer Bias**
+- **Issue:** AI generated quizzes with 95% of correct answers in option A
+- **Solution:** Engineered prompts with explicit randomization instructions
+- **Result:** Achieved even distribution (20-25% per option)
 
-### Documentation
-- `README.md` - Added frontend troubleshooting section (Nov 13), replaced with portfolio version (Jan 2026)
+**Problem 2: AI Hallucination**
+- **Issue:** AI generated irrelevant content when given nonsense input
+- **Solution:** Added content validation constraints to prompts
+- **Result:** System returns empty results for invalid input instead of hallucinating
 
----
+**Problem 3: Large Document Handling**
+- **Issue:** OpenAI API has token limits
+- **Solution:** Implemented text chunking (20k tokens/chunk) with natural boundary splitting
+- **Result:** Successfully processes large PDFs and PowerPoints
 
-## Code Statistics
-
-**Lines Written:**
-- Backend Java: ~1,500 lines (services, controllers, tests, DTOs)
-- Frontend JavaScript: ~1,200 lines (StudyAssistant component, initial version + History feature)
-- Frontend CSS: ~600 lines
-- **Total: ~3,300 lines of code**
-
-**Tests Written:**
-- 35+ comprehensive tests (unit + integration)
-- 100% pass rate achieved
-
-**Git Commits:**
-- 15+ commits to backend code
-- 12 commits to StudyAssistant.jsx
-- Multiple bug fix and configuration commits
+**Techniques Used:**
+- Explicit output format specifications (Q: / A: pattern for parsing)
+- Difficulty-specific prompt instructions
+- Content validation rules to prevent off-topic generation
 
 ---
 
-## Key Technical Decisions & Implementations
+### 3. Spring Security Configuration
 
-### 1. AI Integration Architecture
-**Decision:** Use Spring AI framework with OpenAI GPT
-**Rationale:** Built-in prompt templating, simplified API calls, better error handling
-**Implementation:** FlashcardService.java, QuizService.java
-
-### 2. Prompt Engineering Strategy
-**Decision:** Explicit format specifications with fallback parsing
-**Rationale:** Ensure consistent AI outputs while handling edge cases
-**Key techniques:**
-- Explicit output format instructions (Q: A: pattern)
-- Randomization constraints for quiz answers
-- Content-only constraints to prevent hallucination
-- Difficulty-specific instructions
-
-### 3. Text Chunking Algorithm
-**Decision:** 20k tokens per chunk with natural boundary splitting
-**Rationale:** Handle large documents while respecting API limits
-**Implementation:** Split at paragraph/sentence boundaries, proportional distribution
-
-### 4. Security Configuration
-**Decision:** Public access for quiz/flashcard endpoints, JWT for others
-**Rationale:** Allow unauthenticated generation while protecting user data
-**Implementation:** SecurityConfig.java with requestMatchers
-
-### 5. Data Transformation Layer
-**Decision:** Transform database format to UI format in viewQuizSet()
-**Rationale:** Bridge incompatible data structures without changing database schema
-**Implementation:** Map {optionA/B/C/D, correctAnswer:'A'} to {options:[], correctAnswer:0}
-
-### 6. Frontend State Management
-**Decision:** React hooks with centralized state in StudyAssistant component
-**Rationale:** Simplicity for team collaboration, easier to debug
-**Implementation:** useState for flashcards, quizzes, history, warnings
+**Problem:** API endpoints blocked with 401/403 errors
+**Solution:** Created `SecurityConfig.java` to configure access control
+**Result:**
+- Public access for flashcard/quiz generation (no authentication needed)
+- Protected endpoints for user-specific features (requires JWT)
 
 ---
 
-## Development Timeline
+### 4. Frontend Development (React)
 
-### Week 1 (Nov 6-7, 2025)
-- Implemented FlashcardService with OpenAI integration
-- Implemented QuizService with difficulty levels
-- Created controllers and DTOs
-- Wrote comprehensive test suites
+**Initial MVP (Nov 13):**
+- Built complete React frontend from scratch
+- Study material input interface
+- Tabbed layout for Flashcards, Quiz, and Chat
+- API integration with backend services
 
-### Week 2 (Nov 10-13, 2025)
-- Fixed Spring Security blocking issue
-- Built initial React frontend from scratch
-- Integrated frontend with backend APIs
+**History Feature (Dec 3):**
+- Added "History" tab for viewing saved flashcard/quiz sets
+- Implemented CRUD operations (view, delete saved sets)
+- Fixed critical data format mismatch bug
 
-### Week 3 (Nov 16-20, 2025)
-- Fixed AI output quality issues (answer bias, hallucination)
-- Integrated warning message system
-- Added streaming support for flashcards/quizzes
+**Data Format Bug Fix:**
+- **Problem:** Database stored quiz data as `{optionA, optionB, optionC, optionD, correctAnswer: 'A'}` but UI expected `{options: [], correctAnswer: 0}`
+- **Solution:** Built transformation layer to convert between formats
+- **Impact:** Prevented application crashes when loading saved quizzes
 
-### Week 4 (Dec 3, 2025)
-- Implemented History tab feature (CRUD operations)
-- Fixed data format mismatch bug
-- Resolved repository test timing issues
-- Created supervisor-friendly startup scripts
+**Key Files:**
+- `StudyAssistant.jsx` - Main component (co-authored with Fiachra Tobin)
+- `StudyAssistant.css` - Component styling
 
 ---
 
-## Files NOT Authored by Me
+### 5. Production Environment Fixes
 
-### Authentication System
-- `AuthController.java`, `AuthService.java`, `JwtTokenProvider.java` (Abdul Wadood)
-- `UserDetailsServiceImpl.java` (Abdul Wadood)
-
-### Document Parsing
-- `DocumentParsingService.java` (Abdul Wadood)
-- PDF/PPT parsing logic (Abdul Wadood)
-
-### Database Entities
-- `User.java`, `FlashcardSet.java`, `QuizSet.java`, `ChatSession.java` (Ngo Hung)
-- Repository interfaces (base versions by Ngo Hung, modified by me)
-
-### Chat System
-- `ChatService.java`, `ChatController.java` (Multiple authors)
-- Chat history management (Fiachra)
-
-### Frontend Components (Not Mine)
-- `Auth.js` - Login/Registration UI (Fiachra)
-- Three-panel layout redesign (Fiachra)
-- File upload components (Abdul + Fiachra)
-
-### DevOps & CI/CD
-- `.gitlab-ci.yml` (Tomas)
-- Docker configuration (Tomas)
-- Merge conflict resolution (Tomas)
+**Issues Resolved:**
+- Spring Security blocking endpoints → Created SecurityConfig
+- React file watching crashes in VM environments → Added CHOKIDAR_USEPOLLING
+- Repository test timing failures → Fixed assertions and added @Query annotations
+- Maven build errors → Fixed application.properties syntax
 
 ---
 
-## Verification
+## Team Collaboration
 
-All my contributions are documented with:
-- ✅ Git commit history showing my authorship
-- ✅ Detailed dev-logs with timestamps and screenshots
-- ✅ Test results and API testing evidence
-- ✅ Original code files with consistent coding style
+This was a 5-person team project. Work NOT done by me:
 
-### Dev-Logs (My Work)
-1. [2025-11-06-flashcard-generation.md](docs/dev-logs/HaoShe/2025-11-06-flashcard-generation.md) - Flashcard implementation
-2. [2025-11-07-mcq-generation.md](docs/dev-logs/HaoShe/2025-11-07-mcq-generation.md) - Quiz implementation
-3. [2025-11-10-Spring-Security-Fix.md](docs/dev-logs/HaoShe/2025-11-10-Spring-Security-Fix.md) - Security config fix
-4. [2025-11-13-Frontend-Development.md](docs/dev-logs/HaoShe/2025-11-13-Frontend-Development.md) - Initial frontend
-5. [2025-11-16-ai-output-sanitization-1.md](docs/dev-logs/HaoShe/2025-11-16-ai-output-sanitization-1.md) - Answer bias fix
-6. [2025-11-17-ai-output-sanitization-2.md](docs/dev-logs/HaoShe/2025-11-17-ai-output-sanitization-2.md) - Hallucination fix
-7. [2025-11-18-ai-output-sanitization-3.md](docs/dev-logs/HaoShe/2025-11-18-ai-output-sanitization-3.md) - Warning integration
-8. [2025-12-03-history-tab-ui-implementation.md](docs/dev-logs/HaoShe/2025-12-03-history-tab-ui-implementation.md) - History tab
+**Authentication System** - Abdul Wadood
+**Document Upload/Parsing** - Abdul Wadood
+**Database Entities** - Ngo Hung
+**Frontend Redesign (3-panel layout)** - Fiachra Tobin
+**CI/CD & DevOps** - Tomas Audejaitis
 
-### AI Usage Documentation
-- [developer-notes/ai-usage-002](developer-notes/ai-usage-002) - My AI-assisted development process
+The `StudyAssistant.jsx` component was collaborative work with Fiachra Tobin (12 commits each).
 
 ---
 
-## Contact for Verification
+## Technical Skills Demonstrated
 
-For questions about my contributions or verification:
+**Backend:**
+- OpenAI API integration
+- Prompt engineering for AI reliability
+- Spring Boot service development
+- Spring Security configuration
+- JUnit/Mockito testing
+- RESTful API design
+
+**Frontend:**
+- React with hooks
+- State management
+- API integration
+- Data transformation
+- Production debugging
+
+**Software Engineering:**
+- Problem-solving (AI bias, data format mismatches)
+- Test-driven development
+- Technical documentation
+- AI-assisted development
+
+---
+
+## Documentation
+
+All my work is documented with timestamps, screenshots, and code examples:
+
+**Dev-Logs:**
+1. [Flashcard Generation](docs/dev-logs/HaoShe/2025-11-06-flashcard-generation.md)
+2. [Quiz Generation](docs/dev-logs/HaoShe/2025-11-07-mcq-generation.md)
+3. [Spring Security Fix](docs/dev-logs/HaoShe/2025-11-10-Spring-Security-Fix.md)
+4. [Frontend Development](docs/dev-logs/HaoShe/2025-11-13-Frontend-Development.md)
+5. [Answer Bias Fix](docs/dev-logs/HaoShe/2025-11-16-ai-output-sanitization-1.md)
+6. [Hallucination Fix](docs/dev-logs/HaoShe/2025-11-17-ai-output-sanitization-2.md)
+7. [Warning Integration](docs/dev-logs/HaoShe/2025-11-18-ai-output-sanitization-3.md)
+8. [History Tab](docs/dev-logs/HaoShe/2025-12-03-history-tab-ui-implementation.md)
+
+**AI Usage:** [developer-notes/ai-usage-002](developer-notes/ai-usage-002)
+
+---
+
+## Contact
 
 **Hao She**
 **Email:** hshe@tcd.ie
 **LinkedIn:** http://www.linkedin.com/in/hao-she
 **GitHub:** https://github.com/haoshe
 
-**Original Team Repository:** https://gitlab.scss.tcd.ie/csu33012-2526-group23/csu33012-2526-project23
-
 ---
 
-*This document was created to clearly delineate my contributions for portfolio and employment purposes. All information is verifiable through git history, dev-logs, and the original team repository.*
+*This document clearly delineates my contributions for portfolio and employment purposes. All information is verifiable through git history, dev-logs, and documentation.*

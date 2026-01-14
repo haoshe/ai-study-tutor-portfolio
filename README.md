@@ -2,11 +2,10 @@
 
 > **Note:** This is a portfolio fork of a 5-person group project from CSU33012 (Trinity College Dublin, 2025-26).
 > This repository highlights **my specific contributions** to the project.
-> Original team repository: [csu33012-2526-group23](https://gitlab.scss.tcd.ie/csu33012-2526-group23/csu33012-2526-project23)
 
 ---
 
-## 🎯 Project Overview
+##  Project Overview
 
 An AI-powered study assistant that generates flashcards, quizzes, and provides personalized tutoring from uploaded study materials (PDFs, PowerPoint, text). The system uses OpenAI GPT to transform passive study materials into interactive learning experiences.
 
@@ -17,7 +16,7 @@ An AI-powered study assistant that generates flashcards, quizzes, and provides p
 
 ---
 
-## 🚀 My Contributions
+##  My Contributions
 
 ### 🤖 Backend AI Integration (Java/Spring Boot)
 
@@ -50,7 +49,7 @@ Through advanced prompt engineering, I fixed major reliability problems:
 
 ---
 
-### 💻 Frontend Development (React)
+###  Frontend Development (React)
 
 **What I Built:**
 - **Initial MVP Frontend** (Nov 13): Complete React application from scratch with study material input, flashcard/quiz generation, tabbed interface
@@ -79,7 +78,7 @@ Teammate Fiachra Tobin contributed: three-panel layout redesign, authentication 
 
 ---
 
-### 🛠️ Production Debugging & DevOps
+###  Production Debugging & DevOps
 
 **Issues I Resolved:**
 - Spring Security blocking API endpoints (401/403 errors) - Created SecurityConfig
@@ -96,7 +95,7 @@ Teammate Fiachra Tobin contributed: three-panel layout redesign, authentication 
 
 ---
 
-## 📊 Development Process & AI-Assisted Development
+##  Development Process & AI-Assisted Development
 
 I documented my entire development process in detailed dev-logs, demonstrating:
 - **AI-assisted development workflow** using Claude AI
@@ -111,7 +110,7 @@ I documented my entire development process in detailed dev-logs, demonstrating:
 
 ---
 
-## 🎓 Skills Demonstrated
+##  Skills Demonstrated
 
 **Backend Development:**
 - OpenAI API integration and prompt engineering
@@ -123,7 +122,6 @@ I documented my entire development process in detailed dev-logs, demonstrating:
 **Frontend Development:**
 - React component development with hooks
 - State management and data transformation
-- API integration with JWT authentication
 - Responsive UI design
 - Production debugging
 
@@ -136,7 +134,7 @@ I documented my entire development process in detailed dev-logs, demonstrating:
 
 ---
 
-## 🏗️ Architecture
+##  Architecture
 
 ```
 ┌─────────────────────────────────────────┐
@@ -165,7 +163,7 @@ I documented my entire development process in detailed dev-logs, demonstrating:
 
 ---
 
-## 📁 Repository Structure
+##  Repository Structure
 
 ```
 ai-study-tutor-portfolio/
@@ -174,22 +172,22 @@ ai-study-tutor-portfolio/
 ├── src/
 │   ├── main/java/.../
 │   │   ├── service/
-│   │   │   ├── FlashcardService.java     # ✅ I wrote this
-│   │   │   ├── QuizService.java          # ✅ I wrote this
+│   │   │   ├── FlashcardService.java     #  I wrote this
+│   │   │   ├── QuizService.java          #  I wrote this
 │   │   │   └── ...                       # Other services (teammates)
 │   │   ├── controller/
-│   │   │   ├── FlashcardController.java  # ✅ I wrote this
-│   │   │   ├── QuizController.java       # ✅ I wrote this
+│   │   │   ├── FlashcardController.java  #  I wrote this
+│   │   │   ├── QuizController.java       #  I wrote this
 │   │   │   └── ...                       # Other controllers (teammates)
 │   │   └── config/
-│   │       └── SecurityConfig.java       # ✅ I wrote this
-│   └── test/java/.../                    # ✅ I wrote test files
+│   │       └── SecurityConfig.java       #  I wrote this
+│   └── test/java/.../                    #  I wrote test files
 ├── frontend/
 │   └── src/components/
-│       ├── StudyAssistant.jsx            # ✅ I built initial version + History feature
-│       ├── StudyAssistant.css            # ✅ I authored styling
+│       ├── StudyAssistant.jsx            #  I built initial version + History feature
+│       ├── StudyAssistant.css            #  I authored styling
 │       └── ...                           # Other components (teammates)
-├── docs/dev-logs/HaoShe/                 # ✅ My development logs
+├── docs/dev-logs/HaoShe/                 #  My development logs
 │   ├── 2025-11-06-flashcard-generation.md
 │   ├── 2025-11-07-mcq-generation.md
 │   ├── 2025-11-10-Spring-Security-Fix.md
@@ -200,7 +198,7 @@ ai-study-tutor-portfolio/
 │   └── 2025-12-03-history-tab-ui-implementation.md
 └── developer-notes/
     ├── ai-usage-001.md                   # General AI usage overview
-    └── ai-usage-002                      # ✅ My AI usage documentation
+    └── ai-usage-002                      #  My AI usage documentation
 ```
 
 ---
@@ -214,8 +212,6 @@ This project was built by a team of 5 developers:
 - **Fiachra Tobin:** Frontend Components, Login Implementation, UI Redesign
 - **Tomas Audejaitis:** CI/CD, DevOps, Merge Management
 - **Ngo Hung:** Database Integration, Error Handling, Automated Testing
-
-**Original Team Repository:** [GitLab - csu33012-2526-group23](https://gitlab.scss.tcd.ie/csu33012-2526-group23/csu33012-2526-project23)
 
 ---
 
@@ -238,9 +234,9 @@ cd ai-study-tutor-portfolio
 chmod +x setup-database.sh
 ./setup-database.sh
 
-# Set environment variables
-export OPENAI_API_KEY=your_key_here
-export JWT_SECRET=your_secret_here
+# Configure environment variables
+# Create a .env file in the root directory:
+echo "export OPENAI_API_KEY=your_key_here" > .env
 
 # Build and run
 source .env
@@ -256,6 +252,12 @@ Backend runs on `http://localhost:8080`
 # Navigate to frontend
 cd frontend
 
+# Create frontend/.env file:
+cat > .env << EOF
+DANGEROUSLY_DISABLE_HOST_CHECK=true
+CHOKIDAR_USEPOLLING=true
+EOF
+
 # Install dependencies
 npm install
 
@@ -269,23 +271,9 @@ Frontend runs on `http://localhost:3000`
 
 ---
 
-## 📸 Screenshots
-
-### History Tab (Built by me)
-![History Tab](screenshots/history-tab.png) *(Add screenshot)*
-
-### Flashcard Generation (AI Integration by me)
-![Flashcard Generation](screenshots/flashcard-generation.png) *(Add screenshot)*
-
-### Quiz with Even Answer Distribution (Fixed by me)
-![Quiz](screenshots/quiz-even-distribution.png) *(Add screenshot)*
-
----
-
-## 🔗 Links
+##  Links
 
 - **Portfolio Repository:** https://github.com/haoshe/ai-study-tutor-portfolio
-- **Original Team Repository:** https://gitlab.scss.tcd.ie/csu33012-2526-group23/csu33012-2526-project23
 - **My Development Logs:** [docs/dev-logs/HaoShe/](docs/dev-logs/HaoShe/)
 - **Detailed Contributions:** [CONTRIBUTIONS.md](CONTRIBUTIONS.md)
 
@@ -297,7 +285,7 @@ This project was developed as part of CSU33012 coursework at Trinity College Dub
 
 ---
 
-## 📧 Contact
+##  Contact
 
 **Hao She**
 **Email:** hshe@tcd.ie
