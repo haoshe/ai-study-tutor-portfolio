@@ -49,10 +49,13 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         
         // Allow requests from local frontend and Coder frontend
-        configuration.setAllowedOrigins(Arrays.asList(
-            "http://localhost:3000",                                            // Local development
-            "https://ai-study-tutor-frontend.onrender.com"                     // for render.com
-        ));
+        // configuration.setAllowedOrigins(Arrays.asList(
+        //     "http://localhost:3000",                                            // Local development
+        //     "https://ai-study-tutor-frontend.onrender.com"                     // for render.com
+        // ));
+
+        // Allow ANY origin using a wildcard pattern
+        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
         
         // Allow common HTTP methods
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
