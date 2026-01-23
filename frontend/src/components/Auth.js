@@ -109,7 +109,7 @@ function Auth({ onLoginSuccess }) {
     //     : { username: formData.username, email: formData.email, password: formData.password };
 
     try {
-      const API_URL = "https://ai-study-tutor-portfolio.onrender.com";       
+      const API_URL = "https://ai-study-tutor-9vvp.onrender.com";       
       const endpoint = isLogin 
         ? `${API_URL}/api/auth/login` 
         : `${API_URL}/api/auth/register`;    
