@@ -102,8 +102,17 @@ function Auth({ onLoginSuccess }) {
       }
     }
 
+    // try {
+    //   const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
+    //   const payload = isLogin 
+    //     ? { username: formData.username, password: formData.password, rememberMe: formData.rememberMe }
+    //     : { username: formData.username, email: formData.email, password: formData.password };
+
     try {
-      const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
+      const API_URL = "https://ai-study-tutor-portfolio.onrender.com";       
+      const endpoint = isLogin 
+        ? `${API_URL}/api/auth/login` 
+        : `${API_URL}/api/auth/register`;    
       const payload = isLogin 
         ? { username: formData.username, password: formData.password, rememberMe: formData.rememberMe }
         : { username: formData.username, email: formData.email, password: formData.password };
