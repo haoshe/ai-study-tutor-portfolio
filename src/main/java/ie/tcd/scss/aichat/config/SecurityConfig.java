@@ -51,6 +51,7 @@ public class SecurityConfig {
         // Allow requests from local frontend and Coder frontend
         configuration.setAllowedOrigins(Arrays.asList(
             "http://localhost:3000"                                            // Local development
+            "https://ai-study-tutor-frontend.onrender.com"                     // for render.com
         ));
         
         // Allow common HTTP methods
