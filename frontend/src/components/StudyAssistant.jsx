@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './StudyAssistant.css';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+// const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+const API_BASE_URL = "https://ai-study-tutor-9vvp.onrender.com";
 
 function StudyAssistant({ userId }) {
 // ============ SOURCES PANEL STATE ============
